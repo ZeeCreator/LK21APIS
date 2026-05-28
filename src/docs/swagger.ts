@@ -17,12 +17,12 @@ export async function setupSwagger(app: FastifyInstance): Promise<void> {
       },
       servers: [
         {
-          url: `http://localhost:${env.APP_PORT}`,
-          description: 'Development server',
-        },
-        {
           url: 'https://lk-21-apis.vercel.app',
           description: 'Production server',
+        },
+        {
+          url: `http://localhost:${env.APP_PORT}`,
+          description: 'Development server',
         },
       ],
       tags: [
