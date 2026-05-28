@@ -127,6 +127,21 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-start();
+const isVercel = !!process.env.VERCEL;
+
+if (!isVercel) {
+  start();
+}
 
 export { buildApp };
+
+// Vercel serverless handler
+let cachedApp: Awaited<ReturnType<typeof buildApp>> | null = null;
+export default async function handler(req: any, res: any) {
+  if (!cachedApp) {
+    await connectDatabase();
+    cachedApp = await buildApp();
+    await cachedApp.ready();
+  }
+  cachedApp.server.emit('request', req, res);
+}
