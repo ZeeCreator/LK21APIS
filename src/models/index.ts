@@ -1,1 +1,1 @@
-export type { Movie, Genre, Download, Subtitle } from '@prisma/client';
+// Database types removed - running in scraper-only mode

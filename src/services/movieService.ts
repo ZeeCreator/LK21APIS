@@ -3,7 +3,6 @@ import { cache } from '../cache/redisCache';
 import { cacheConfig } from '../config/app';
 import { latestScraper, detailScraper, searchScraper, genreScraper, countryScraper } from '../scrapers';
 import { getPaginationMeta, PaginationParams } from '../utils/response';
-import { Prisma } from '@prisma/client';
 
 export class MovieService {
   async getLatest(page: number = 1, limit: number = 20) {
@@ -114,7 +113,7 @@ export class MovieService {
 
     if (getDatabaseStatus()) {
       try {
-        const where: Prisma.MovieWhereInput = {
+        const where: any = {
           OR: [
             { title: { contains: query, mode: 'insensitive' as const } },
             { titleEn: { contains: query, mode: 'insensitive' as const } },
