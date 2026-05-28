@@ -1,0 +1,8 @@
+export { movieController } from './movieController';
+export { searchController } from './searchController';
+export { genreController } from './genreController';
+export { countryController } from './countryController';
+export { watchController } from './watchController';
+export { downloadController } from './downloadController';
+export { subtitleController } from './subtitleController';
+export { adminController } from './adminController';

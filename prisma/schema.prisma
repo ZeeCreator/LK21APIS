@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Movie {
+  id          String   @id @default(uuid()) @db.Uuid
+  externalId  String?  @unique @map("external_id")
+  title       String
+  slug        String?  @unique
+  titleEn     String?  @map("title_en")
+  description String?  @db.Text
+  posterUrl   String?  @map("poster_url")
+  backdropUrl String?  @map("backdrop_url")
+  year        Int?
+  rating      Float?   @default(0)
+  duration    String?
+  quality     String?
+  status      String?
+  country     String?
+  isTrending  Boolean  @default(false) @map("is_trending")
+  isLatest    Boolean  @default(false) @map("is_latest")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  genres     Genre[]
+  downloads  Download[]
+  subtitles  Subtitle[]
+
+  @@index([title])
+  @@index([year])
+  @@index([isTrending])
+  @@index([isLatest])
+  @@index([createdAt])
+  @@map("movies")
+}
+
+model Genre {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String?  @unique
+  movieId   String   @map("movie_id") @db.Uuid
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([name])
+  @@index([movieId])
+  @@map("genres")
+}
+
+model Download {
+  id        String   @id @default(uuid()) @db.Uuid
+  movieId   String   @map("movie_id") @db.Uuid
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  quality   String?
+  url       String
+  size      String?
+  provider  String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([movieId])
+  @@map("downloads")
+}
+
+model Subtitle {
+  id        String   @id @default(uuid()) @db.Uuid
+  movieId   String   @map("movie_id") @db.Uuid
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  language  String
+  url       String
+  provider  String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([movieId])
+  @@index([language])
+  @@map("subtitles")
+}

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+*.log
+logs/
+.turbo/
+coverage/
+.DS_Store
+*.pem
+.prisma/

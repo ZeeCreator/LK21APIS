@@ -1,0 +1,7 @@
+export { movieService } from './movieService';
+export { watchService } from './watchService';
+export { downloadService } from './downloadService';
+export { subtitleService } from './subtitleService';
+export { genreService } from './genreService';
+export { countryService } from './countryService';
+export { adminService } from './adminService';
