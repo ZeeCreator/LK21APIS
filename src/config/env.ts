@@ -10,7 +10,7 @@ const envSchema = z.object({
   APP_NAME: z.string().default('DutaMovie API'),
   API_PREFIX: z.string().default('/api/v1'),
 
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.string().url().optional(),
 
   REDIS_HOST: z.string().default('localhost'),
   REDIS_PORT: z.coerce.number().default(6379),
@@ -18,7 +18,7 @@ const envSchema = z.object({
   REDIS_DB: z.coerce.number().default(0),
   REDIS_URL: z.string().optional(),
 
-  SCRAPER_BASE_URL: z.string().url(),
+  SCRAPER_BASE_URL: z.string().url().default('https://ladyriderswear.com'),
   SCRAPER_TIMEOUT: z.coerce.number().default(30000),
   SCRAPER_RETRY_COUNT: z.coerce.number().default(3),
   SCRAPER_RETRY_DELAY: z.coerce.number().default(1000),
