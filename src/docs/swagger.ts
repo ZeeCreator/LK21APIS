@@ -20,9 +20,15 @@ export async function setupSwagger(app: FastifyInstance): Promise<void> {
           url: `http://localhost:${env.APP_PORT}`,
           description: 'Development server',
         },
+        {
+          url: 'https://lk-21-apis.vercel.app',
+          description: 'Production server',
+        },
       ],
       tags: [
         { name: 'Movies', description: 'Movie endpoints' },
+        { name: 'Series', description: 'TV series endpoints' },
+        { name: 'TV', description: 'TV detail endpoints' },
         { name: 'Search', description: 'Search endpoints' },
         { name: 'Genres', description: 'Genre endpoints' },
         { name: 'Country', description: 'Country endpoints' },
@@ -30,6 +36,8 @@ export async function setupSwagger(app: FastifyInstance): Promise<void> {
         { name: 'Download', description: 'Download endpoints' },
         { name: 'Subtitles', description: 'Subtitle endpoints' },
         { name: 'Admin', description: 'Admin endpoints' },
+        { name: 'URL Extract', description: 'URL extraction endpoints' },
+        { name: 'Test Stream', description: 'Test stream page' },
       ],
     },
   });
