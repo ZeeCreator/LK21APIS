@@ -81,13 +81,11 @@ export function parseEpisodeDetail(html: string, slug: string): ParsedMovie {
 
   let quality: string | undefined = undefined;
   let releaseDate: string | undefined = undefined;
-  let episodeName: string | undefined = undefined;
   $('.content-moviedata .gmr-moviedata').each((_, el) => {
     const label = $(el).find('strong').text().trim().replace(':', '');
     const value = $(el).find('a').first().text().trim() || $(el).text().replace(/[^:]*:\s*/i, '').trim();
     if (label === 'Kualitas') quality = value || undefined;
     if (label === 'Rilis') releaseDate = value || undefined;
-    if (label === 'Nama Episode') episodeName = value || undefined;
   });
 
   const watchSources: ParsedWatchSource[] = [];
@@ -137,6 +135,7 @@ export function parseEpisodeDetail(html: string, slug: string): ParsedMovie {
     posterUrl,
     quality,
     releaseDate,
+    genres: [],
     episodes: episodes.length > 0 ? episodes : undefined,
     watchSources: watchSources.length > 0 ? watchSources : undefined,
     downloadLinks: downloadLinks.length > 0 ? downloadLinks : undefined,

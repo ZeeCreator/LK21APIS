@@ -12,7 +12,7 @@ function extractSlugFromUrl(url: string): string {
   return clean.split('/').pop() || '';
 }
 
-function extractMovieItem($: cheerio.CheerioAPI, el: cheerio.AnyNode, seen: Set<string>): ParsedMovieListItem | null {
+function extractMovieItem($: cheerio.CheerioAPI, el: any, seen: Set<string>): ParsedMovieListItem | null {
   const $el = $(el);
   const link = $el.find('a[rel="bookmark"]').first();
   const href = $(link).attr('href') || '';

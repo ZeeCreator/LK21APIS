@@ -80,7 +80,7 @@ export class WatchScraper extends BaseScraper {
   }
 
   private async resolveServerTabs(
-    slug: string,
+    _slug: string,
     tabs: { name: string; pageUrl: string }[],
     existingSources: ParsedWatchSource[]
   ): Promise<ParsedWatchSource[]> {
