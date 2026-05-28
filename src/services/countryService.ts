@@ -18,8 +18,8 @@ export class CountryService {
         });
         if (countries.length > 0) {
           const result = countries
-            .filter((c) => c.country)
-            .map((c) => ({ name: c.country!, slug: c.country!.toLowerCase().replace(/\s+/g, '-') }));
+            .filter((c: any) => c.country)
+            .map((c: any) => ({ name: c.country!, slug: c.country!.toLowerCase().replace(/\s+/g, '-') }));
           await cache.set(cacheKey, result, cacheConfig.ttl.latest);
           return result;
         }

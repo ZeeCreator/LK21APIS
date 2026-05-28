@@ -1,41 +1,60 @@
-import { PrismaClient } from '@prisma/client';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 
-declare global {
-  var __prisma: PrismaClient | undefined;
+let PrismaClient: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  PrismaClient = require('@prisma/client').PrismaClient;
+} catch {
+  // Prisma Client not generated or not available
 }
 
 let isDatabaseConnected = false;
 
-export const prisma: PrismaClient =
-  global.__prisma ??
-  new PrismaClient({
+function createPrisma(): any {
+  if (!PrismaClient) return null;
+  return new PrismaClient({
     log: env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
   });
-
-if (env.NODE_ENV === 'development') {
-  global.__prisma = prisma;
 }
+
+export const prisma: any = new Proxy(
+  {},
+  {
+    get(_, prop) {
+      const client = createPrisma();
+      if (!client) throw new Error('Database not available');
+      return (client as any)[prop];
+    },
+  }
+);
 
 export function getDatabaseStatus(): boolean {
   return isDatabaseConnected;
 }
 
 export async function connectDatabase(): Promise<void> {
+  const client = createPrisma();
+  if (!client) {
+    logger.warn('Database is not available - running without database');
+    isDatabaseConnected = false;
+    return;
+  }
   try {
-    await prisma.$connect();
+    await client.$connect();
     isDatabaseConnected = true;
     logger.info('Database connected successfully');
-  } catch (error) {
+  } catch {
     logger.warn('Database is not available - running without database');
     isDatabaseConnected = false;
   }
 }
 
 export async function disconnectDatabase(): Promise<void> {
+  const client = createPrisma();
+  if (!client) return;
   try {
-    await prisma.$disconnect();
+    await client.$disconnect();
   } catch {
     // ignore
   }
