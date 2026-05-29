@@ -9,7 +9,8 @@ export class SokujaController {
       const data = await sokujaService.getHomepage(forceRefresh);
       sendSuccess(reply, data, 'Sokuja homepage data retrieved successfully');
     } catch (error) {
-      sendError(reply, 500, 'Failed to retrieve Sokuja homepage data');
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      sendError(reply, 500, `Failed to retrieve Sokuja homepage data: ${msg}`);
     }
   }
 }
