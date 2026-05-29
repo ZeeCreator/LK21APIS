@@ -32,8 +32,8 @@ export class SokujaScraper extends BaseScraper {
   }
 
   async scrapeDetail(slug: string): Promise<string> {
-    const url = `/anime/${slug}/`;
-    logger.info({ url: `https://nekokun.my.id${url}`, slug }, 'Scraping anime detail');
+    const url = `https://nekokun.my.id/anime/${slug}/`;
+    logger.info({ url, slug }, 'Scraping anime detail');
     return this.fetchWithRetry(url);
   }
 

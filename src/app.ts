@@ -16,6 +16,7 @@ async function buildApp() {
     logger: false,
     bodyLimit: 10 * 1024 * 1024,
     requestTimeout: 30000,
+    maxParamLength: 500,
   });
 
   // Error handler
