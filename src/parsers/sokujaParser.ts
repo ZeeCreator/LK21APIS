@@ -17,8 +17,33 @@ export interface SokujaHomepage {
   popularToday: SokujaAnimeItem[];
   latest: SokujaAnimeItem[];
   popularWeekly: SokujaAnimeItem[];
-  popularMonthly: SokujaAnimeItem[];
-  popularAllTime: SokujaAnimeItem[];
+}
+
+export interface SokujaScheduleItem {
+  title: string;
+  slug: string;
+  poster: string | null;
+  time: string | null;
+  episode: string | null;
+}
+
+export interface SokujaSchedule {
+  [day: string]: SokujaScheduleItem[];
+}
+
+export interface SokujaGenreItem {
+  name: string;
+  slug: string;
+  count: number;
+}
+
+export interface SokujaAnimeList {
+  items: SokujaAnimeItem[];
+}
+
+export interface SokujaSearchResult {
+  query: string;
+  items: SokujaAnimeItem[];
 }
 
 function extractSlug(url: string): string {
@@ -34,8 +59,8 @@ function parseArticle($: cheerio.CheerioAPI, el: Element): SokujaAnimeItem {
   const img = $el.find('.limit img, img.ts-post-image').first();
   const poster = img.attr('src') || img.attr('data-src') || null;
 
-  const titleEl = $el.find('.tt').first();
-  const title = titleEl.text().trim() || img.attr('alt') || link.attr('title') || '';
+  const titleEl = $el.find('.tt h2[itemprop="headline"]').first();
+  const title = titleEl.text().trim() || $el.find('.tt').contents().first().text().trim() || img.attr('alt') || link.attr('title') || '';
 
   const epEl = $el.find('.epx').first();
   const episode = epEl.length ? epEl.text().trim() : null;
@@ -58,51 +83,12 @@ function parseArticle($: cheerio.CheerioAPI, el: Element): SokujaAnimeItem {
   };
 }
 
-function parsePopularSidebarItem($: cheerio.CheerioAPI, el: Element): SokujaAnimeItem {
-  const $el = $(el);
-  const link = $el.find('a.series').first();
-  const href = link.attr('href') || '';
-
-  const img = $el.find('img').first();
-  const poster = img.attr('src') || img.attr('data-src') || null;
-  const title = $el.find('h4 a.series').text().trim() || img.attr('alt') || '';
-
-  const slug = href ? extractSlug(href) : title.toLowerCase().replace(/\s+/g, '-');
-
-  let rating: number | null = null;
-  const numscore = $el.find('.numscore').text().trim();
-  if (numscore) {
-    const parsed = parseFloat(numscore);
-    if (!isNaN(parsed)) rating = parsed;
-  }
-
-  const genres: string[] = [];
-  $el.find('span a[rel="tag"]').each((_, a) => {
-    const g = $(a).text().trim();
-    if (g) genres.push(g);
-  });
-
-  return {
-    title,
-    slug,
-    poster: poster?.startsWith('http') ? poster : null,
-    rating,
-    quality: null,
-    type: null,
-    episode: null,
-    year: null,
-    genre: genres.length > 0 ? genres.join(', ') : null,
-  };
-}
-
 export function parseSokujaHomepage(html: string): SokujaHomepage {
   const $ = cheerio.load(html);
   const result: SokujaHomepage = {
     popularToday: [],
     latest: [],
     popularWeekly: [],
-    popularMonthly: [],
-    popularAllTime: [],
   };
 
   const popularSection = $('.releases.hothome').filter((_, el) =>
@@ -127,7 +113,6 @@ export function parseSokujaHomepage(html: string): SokujaHomepage {
     });
   }
 
-  // fallback: find any listupd sections
   if (result.popularToday.length === 0) {
     $('.listupd.popularslider article.bs').each((_, el) => {
       const item = parseArticle($, el);
@@ -141,25 +126,109 @@ export function parseSokujaHomepage(html: string): SokujaHomepage {
     });
   }
 
-  $('#wpop-items .serieslist.pop').each((_, el) => {
-    const $list = $(el);
-    if ($list.hasClass('wpop-weekly')) {
-      $list.find('ul > li').each((_, li) => {
-        const item = parsePopularSidebarItem($, li);
-        if (item.title) result.popularWeekly.push(item);
-      });
-    }
-    if ($list.hasClass('wpop-monthly') || $list.find(':scope').length) {
-      // monthly tab content
-    }
+  $('.wpop-weekly ul > li').each((_, li) => {
+    const $li = $(li);
+    const link = $li.find('a.series').first();
+    const href = link.attr('href') || '';
+    const img = $li.find('img').first();
+    const poster = img.attr('src') || null;
+    const title = $li.find('h4 a.series').text().trim() || img.attr('alt') || '';
+    if (!title) return;
+    let rating: number | null = null;
+    const ns = $li.find('.numscore').text().trim();
+    if (ns) { const p = parseFloat(ns); if (!isNaN(p)) rating = p; }
+    const slug = href ? extractSlug(href) : '';
+    result.popularWeekly.push({
+      title, slug,
+      poster: poster?.startsWith('http') ? poster : null,
+      rating, quality: null, type: null, episode: null, year: null, genre: null,
+    });
   });
 
-  $('.wpop-weekly ul > li').each((_, li) => {
-    if (result.popularWeekly.length === 0) {
-      const item = parsePopularSidebarItem($, li);
-      if (item.title) result.popularWeekly.push(item);
+  return result;
+}
+
+export function parseSokujaSchedule(html: string): SokujaSchedule {
+  const $ = cheerio.load(html);
+  const result: SokujaSchedule = {};
+
+  $('div.bixbox.schedulepage').each((_, section) => {
+    const $section = $(section);
+    const dayHeading = $section.find('.releases h3 span, .releases h3').first().text().trim();
+    if (!dayHeading) return;
+
+    const dayItems: SokujaScheduleItem[] = [];
+    $section.find('.listupd > .bs').each((_, el) => {
+      const $el = $(el);
+      const link = $el.find('.bsx a').first();
+      const href = link.attr('href') || '';
+      const title = link.attr('title') || $el.find('.tt').text().trim() || '';
+      if (!title || !href) return;
+
+      const img = $el.find('.limit img').first();
+      const poster = img.attr('src') || img.attr('data-src') || null;
+
+      const timeEl = $el.find('.cndwn').first();
+      const time = timeEl.length ? timeEl.text().trim() : null;
+
+      const epEl = $el.find('.sb').first();
+      const episode = epEl.length ? epEl.text().trim() : null;
+
+      const slug = extractSlug(href);
+      dayItems.push({
+        title,
+        slug,
+        poster: poster?.startsWith('http') ? poster : null,
+        time,
+        episode,
+      });
+    });
+
+    if (dayItems.length > 0) {
+      result[dayHeading] = dayItems;
     }
   });
 
   return result;
+}
+
+export function parseSokujaGenreLists(html: string): SokujaGenreItem[] {
+  const $ = cheerio.load(html);
+  const genres: SokujaGenreItem[] = [];
+
+  $('ul.taxindex li').each((_, el) => {
+    const $el = $(el);
+    const link = $el.find('a').first();
+    const href = link.attr('href') || '';
+    const name = link.find('.name').text().trim();
+    const countText = link.find('.count').text().trim();
+    const count = countText ? parseInt(countText, 10) || 0 : 0;
+    const slug = href ? extractSlug(href) : '';
+    if (name) {
+      genres.push({ name, slug, count });
+    }
+  });
+
+  return genres;
+}
+
+export function parseSokujaAnimeLists(html: string): SokujaAnimeItem[] {
+  const $ = cheerio.load(html);
+  const items: SokujaAnimeItem[] = [];
+  const seen = new Set<string>();
+
+  $('article.bs').each((_, el) => {
+    const item = parseArticle($, el);
+    if (item.title && !seen.has(item.slug)) {
+      seen.add(item.slug);
+      items.push(item);
+    }
+  });
+
+  return items;
+}
+
+export function parseSokujaSearch(html: string, query: string): SokujaSearchResult {
+  const items = parseSokujaAnimeLists(html);
+  return { query, items };
 }
