@@ -5,3 +5,4 @@ export { subtitleService } from './subtitleService';
 export { genreService } from './genreService';
 export { countryService } from './countryService';
 export { adminService } from './adminService';
+export { sokujaService } from './sokujaService';

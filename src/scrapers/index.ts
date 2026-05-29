@@ -6,3 +6,4 @@ export { countryScraper } from './countryScraper';
 export { watchScraper } from './watchScraper';
 export { downloadScraper } from './downloadScraper';
 export { subtitleScraper } from './subtitleScraper';
+export { sokujaScraper } from './sokujaScraper';
