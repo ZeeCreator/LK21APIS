@@ -30,6 +30,18 @@ export class SokujaScraper extends BaseScraper {
     logger.info({ url: `https://nekokun.my.id/?s=${query}`, query }, 'Scraping search');
     return this.fetchWithRetry(`/?s=${encodeURIComponent(query)}`);
   }
+
+  async scrapeDetail(slug: string): Promise<string> {
+    const url = `/anime/${slug}/`;
+    logger.info({ url: `https://nekokun.my.id${url}`, slug }, 'Scraping anime detail');
+    return this.fetchWithRetry(url);
+  }
+
+  async scrapeEpisode(slug: string): Promise<string> {
+    const url = `/${slug}/`;
+    logger.info({ url: `https://nekokun.my.id${url}`, slug }, 'Scraping episode');
+    return this.fetchWithRetry(url);
+  }
 }
 
 export const sokujaScraper = new SokujaScraper();

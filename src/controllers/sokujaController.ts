@@ -62,6 +62,38 @@ export class SokujaController {
       sendError(reply, 500, `Failed to search: ${msg}`);
     }
   }
+
+  async getDetail(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { slug } = request.params as { slug: string };
+      const forceRefresh = (request.query as any)?.refresh === 'true';
+      const data = await sokujaService.getDetail(slug, forceRefresh);
+      if (!data.title) {
+        sendError(reply, 404, 'Anime not found');
+        return;
+      }
+      sendSuccess(reply, data, 'Anime detail retrieved successfully');
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      sendError(reply, 500, `Failed to retrieve anime detail: ${msg}`);
+    }
+  }
+
+  async getEpisode(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { slug } = request.params as { slug: string };
+      const forceRefresh = (request.query as any)?.refresh === 'true';
+      const data = await sokujaService.getEpisode(slug, forceRefresh);
+      if (!data.title) {
+        sendError(reply, 404, 'Episode not found');
+        return;
+      }
+      sendSuccess(reply, data, 'Episode detail retrieved successfully');
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      sendError(reply, 500, `Failed to retrieve episode: ${msg}`);
+    }
+  }
 }
 
 export const sokujaController = new SokujaController();
