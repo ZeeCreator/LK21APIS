@@ -3,11 +3,11 @@ import { logger } from '../utils/logger';
 
 export class SokujaScraper extends BaseScraper {
   constructor() {
-    super('https://x5.sokuja.uk');
+    super('https://nekokun.my.id');
   }
 
   async scrapeHomepage(): Promise<string> {
-    logger.info({ url: 'https://x5.sokuja.uk/' }, 'Scraping Sokuja homepage');
+    logger.info({ url: 'https://nekokun.my.id/' }, 'Scraping Sokuja homepage');
     return this.fetchWithRetry('/');
   }
 }

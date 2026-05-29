@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import type { Element } from 'domhandler';
 
 export interface SokujaAnimeItem {
   title: string;
@@ -13,14 +14,11 @@ export interface SokujaAnimeItem {
 }
 
 export interface SokujaHomepage {
-  hero: SokujaAnimeItem[];
+  popularToday: SokujaAnimeItem[];
   latest: SokujaAnimeItem[];
-  ongoing: SokujaAnimeItem[];
-  completed: SokujaAnimeItem[];
   popularWeekly: SokujaAnimeItem[];
   popularMonthly: SokujaAnimeItem[];
   popularAllTime: SokujaAnimeItem[];
-  comments: { author: string; text: string; time: string }[];
 }
 
 function extractSlug(url: string): string {
@@ -28,112 +26,140 @@ function extractSlug(url: string): string {
   return clean.split('/').pop() || '';
 }
 
-function extractAnimeItems($: cheerio.CheerioAPI, container: cheerio.Cheerio<any>): SokujaAnimeItem[] {
-  const items: SokujaAnimeItem[] = [];
-  const seen = new Set<string>();
+function parseArticle($: cheerio.CheerioAPI, el: Element): SokujaAnimeItem {
+  const $el = $(el);
+  const link = $el.find('a[itemprop="url"]').first();
+  const href = link.attr('href') || '';
 
-  container.find('a').each((_, el) => {
-    const href = $(el).attr('href') || '';
-    if (!href || href === '#' || href.startsWith('javascript:')) return;
+  const img = $el.find('.limit img, img.ts-post-image').first();
+  const poster = img.attr('src') || img.attr('data-src') || null;
 
-    const img = $(el).find('img').first();
-    const poster = img.attr('src') || img.attr('data-src') || null;
-    const title = img.attr('alt') || $(el).attr('title') || '';
+  const titleEl = $el.find('.tt').first();
+  const title = titleEl.text().trim() || img.attr('alt') || link.attr('title') || '';
 
-    if (!title) return;
+  const epEl = $el.find('.epx').first();
+  const episode = epEl.length ? epEl.text().trim() : null;
 
-    const slug = extractSlug(href);
-    if (seen.has(slug)) return;
-    seen.add(slug);
+  const typeEl = $el.find('.typez').first();
+  const type = typeEl.length ? typeEl.text().trim() : null;
 
-    items.push({
-      title,
-      slug,
-      poster: poster?.startsWith('http') ? poster : null,
-      rating: null,
-      quality: null,
-      type: null,
-      episode: null,
-      year: null,
-      genre: null,
-    });
+  const slug = href ? extractSlug(href) : title.toLowerCase().replace(/\s+/g, '-');
+
+  return {
+    title,
+    slug,
+    poster: poster?.startsWith('http') ? poster : null,
+    rating: null,
+    quality: null,
+    type,
+    episode,
+    year: null,
+    genre: null,
+  };
+}
+
+function parsePopularSidebarItem($: cheerio.CheerioAPI, el: Element): SokujaAnimeItem {
+  const $el = $(el);
+  const link = $el.find('a.series').first();
+  const href = link.attr('href') || '';
+
+  const img = $el.find('img').first();
+  const poster = img.attr('src') || img.attr('data-src') || null;
+  const title = $el.find('h4 a.series').text().trim() || img.attr('alt') || '';
+
+  const slug = href ? extractSlug(href) : title.toLowerCase().replace(/\s+/g, '-');
+
+  let rating: number | null = null;
+  const numscore = $el.find('.numscore').text().trim();
+  if (numscore) {
+    const parsed = parseFloat(numscore);
+    if (!isNaN(parsed)) rating = parsed;
+  }
+
+  const genres: string[] = [];
+  $el.find('span a[rel="tag"]').each((_, a) => {
+    const g = $(a).text().trim();
+    if (g) genres.push(g);
   });
 
-  return items;
+  return {
+    title,
+    slug,
+    poster: poster?.startsWith('http') ? poster : null,
+    rating,
+    quality: null,
+    type: null,
+    episode: null,
+    year: null,
+    genre: genres.length > 0 ? genres.join(', ') : null,
+  };
 }
 
 export function parseSokujaHomepage(html: string): SokujaHomepage {
   const $ = cheerio.load(html);
   const result: SokujaHomepage = {
-    hero: [],
+    popularToday: [],
     latest: [],
-    ongoing: [],
-    completed: [],
     popularWeekly: [],
     popularMonthly: [],
     popularAllTime: [],
-    comments: [],
   };
 
-  const sectionPatterns: { key: keyof SokujaHomepage; headings: string[] }[] = [
-    { key: 'hero', headings: ['featured', 'hero', 'slider', 'trending'] },
-    { key: 'latest', headings: ['update terbaru', 'latest', 'terbaru'] },
-    { key: 'ongoing', headings: ['ongoing'] },
-    { key: 'completed', headings: ['completed', 'selesai'] },
-    { key: 'popularWeekly', headings: ['minggu ini', 'weekly', 'populer minggu'] },
-    { key: 'popularMonthly', headings: ['bulan ini', 'monthly', 'populer bulan'] },
-    { key: 'popularAllTime', headings: ['sepanjang masa', 'all time', 'populer semua'] },
-  ];
+  const popularSection = $('.releases.hothome').filter((_, el) =>
+    $(el).text().trim().toLowerCase().includes('terpopuler')
+  ).first().closest('.bixbox');
 
-  for (const section of sectionPatterns) {
-    let container: cheerio.Cheerio<any> | null = null;
-
-    for (const heading of section.headings) {
-      container = $(`h2:contains("${heading}"), h3:contains("${heading}"), h1:contains("${heading}")`)
-        .first()
-        .parent();
-      if (container.length > 0) break;
-
-      container = $(`div:has(h2:contains("${heading}")), section:has(h2:contains("${heading}"))`).first();
-      if (container.length > 0) break;
-    }
-
-    if (container && container.length > 0) {
-      const items = extractAnimeItems($, container);
-      if (section.key === 'hero') result.hero = items;
-      else if (section.key === 'latest') result.latest = items;
-      else if (section.key === 'ongoing') result.ongoing = items;
-      else if (section.key === 'completed') result.completed = items;
-      else if (section.key === 'popularWeekly') result.popularWeekly = items;
-      else if (section.key === 'popularMonthly') result.popularMonthly = items;
-      else if (section.key === 'popularAllTime') result.popularAllTime = items;
-    }
-  }
-
-  if (result.hero.length === 0) {
-    const heroContainer = $('[id*="hero"], [class*="hero"], [class*="slider"], [class*="carousel"]').first();
-    if (heroContainer.length > 0) {
-      result.hero = extractAnimeItems($, heroContainer);
-    }
-  }
-
-  if (result.latest.length === 0) {
-    const mainContent = $('main, .main-content, #content, article').first();
-    if (mainContent.length > 0) {
-      result.latest = extractAnimeItems($, mainContent);
-    }
-  }
-
-  if (result.comments.length === 0) {
-    $('[class*="comment"] li, [class*="comment"] div, [id*="comment"] li').each((_, el) => {
-      const author = $(el).find('[class*="author"], [class*="name"]').first().text().trim();
-      const text = $(el).find('[class*="text"], [class*="content"]').first().text().trim();
-      const time = $(el).find('[class*="time"], [class*="date"], time').first().text().trim();
-      if (author || text) {
-        result.comments.push({ author, text, time });
-      }
+  if (popularSection.length) {
+    popularSection.find('.listupd.popularslider .popconslide > article.bs').each((_, el) => {
+      const item = parseArticle($, el);
+      if (item.title) result.popularToday.push(item);
     });
   }
+
+  const latestSection = $('.releases.latesthome').filter((_, el) =>
+    $(el).text().trim().toLowerCase().includes('rilisan')
+  ).first().closest('.bixbox');
+
+  if (latestSection.length) {
+    latestSection.find('.listupd.normal .excstf > article.bs').each((_, el) => {
+      const item = parseArticle($, el);
+      if (item.title) result.latest.push(item);
+    });
+  }
+
+  // fallback: find any listupd sections
+  if (result.popularToday.length === 0) {
+    $('.listupd.popularslider article.bs').each((_, el) => {
+      const item = parseArticle($, el);
+      if (item.title) result.popularToday.push(item);
+    });
+  }
+  if (result.latest.length === 0) {
+    $('.listupd.normal article.bs').each((_, el) => {
+      const item = parseArticle($, el);
+      if (item.title) result.latest.push(item);
+    });
+  }
+
+  $('#wpop-items .serieslist.pop').each((_, el) => {
+    const $list = $(el);
+    if ($list.hasClass('wpop-weekly')) {
+      $list.find('ul > li').each((_, li) => {
+        const item = parsePopularSidebarItem($, li);
+        if (item.title) result.popularWeekly.push(item);
+      });
+    }
+    if ($list.hasClass('wpop-monthly') || $list.find(':scope').length) {
+      // monthly tab content
+    }
+  });
+
+  $('.wpop-weekly ul > li').each((_, li) => {
+    if (result.popularWeekly.length === 0) {
+      const item = parsePopularSidebarItem($, li);
+      if (item.title) result.popularWeekly.push(item);
+    }
+  });
 
   return result;
 }
