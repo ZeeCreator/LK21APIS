@@ -259,10 +259,12 @@ const ANIME_TITLE_PATTERNS = [
   /^worst/i,
 ];
 
-export function isAnimeTitle(title: string, slug?: string, href?: string): boolean {
+export function isAnimeTitle(title: string, slug?: string, href?: string, genres?: string[]): boolean {
   const lower = title.toLowerCase();
   const slugLower = slug?.toLowerCase() ?? '';
   const hrefLower = href?.toLowerCase() ?? '';
+
+  if (genres?.some((g) => /animasi|animation|hentai/i.test(g))) return true;
 
   for (const keyword of ANIME_KEYWORDS) {
     if (lower.includes(keyword)) return true;

@@ -44,7 +44,13 @@ function extractMovieItem($: cheerio.CheerioAPI, el: any, seen: Set<string>): Pa
   const numbeps = $el.find('.gmr-numbeps').first().text().trim();
   const episodeCount = numbeps ? numbeps.replace(/Eps:\s*/i, '').replace(/\s+/g, ' ').trim() : undefined;
 
-  if (isAnimeTitle(title, slug, href)) return null;
+  const genres: string[] = [];
+  $el.find('.cat-links a, a[rel="category tag"], .gmr-category-item a, .category a, [class*="cat"] a').each((_, a) => {
+    const g = $(a).text().trim();
+    if (g && !genres.includes(g)) genres.push(g);
+  });
+
+  if (isAnimeTitle(title, slug, href, genres)) return null;
 
   return { externalId: slug, title, slug, type, episodeCount, posterUrl, rating, quality };
 }
