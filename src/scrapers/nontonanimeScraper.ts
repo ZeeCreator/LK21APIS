@@ -1,7 +1,7 @@
 import { BaseScraper } from './baseScraper';
 import { logger } from '../utils/logger';
 
-const BASE = 'https://otakudesu.blog';
+const BASE = 'https://www.xml-acronym-demystifier.org';
 
 export class NontonanimeScraper extends BaseScraper {
   constructor() {
@@ -9,7 +9,7 @@ export class NontonanimeScraper extends BaseScraper {
   }
 
   async scrapeHomepage(): Promise<string> {
-    logger.info({ url: BASE + '/' }, 'Scraping OtakuDesu homepage');
+    logger.info({ url: BASE + '/' }, 'Scraping LayarOtaku homepage');
     return this.fetchWithRetry('/');
   }
 
@@ -20,14 +20,15 @@ export class NontonanimeScraper extends BaseScraper {
   }
 
   async scrapeEpisode(slug: string): Promise<string> {
-    const url = `/episode/${slug}/`;
+    const url = `/${slug}/`;
     logger.info({ url: BASE + url, slug }, 'Scraping episode');
     return this.fetchWithRetry(url);
   }
 
   async scrapeSearch(query: string): Promise<string> {
-    logger.info({ url: `${BASE}/?s=${query}&post_type=anime`, query }, 'Scraping search');
-    return this.fetchWithRetry(`/?s=${encodeURIComponent(query)}&post_type=anime`);
+    const qs = `?s=${encodeURIComponent(query)}`;
+    logger.info({ url: `${BASE}/${qs}`, query }, 'Scraping search');
+    return this.fetchWithRetry('/' + qs);
   }
 
   async scrapeJadwal(): Promise<string> {
@@ -36,7 +37,7 @@ export class NontonanimeScraper extends BaseScraper {
   }
 
   async scrapePopuler(): Promise<string> {
-    logger.info({ url: BASE + '/' }, 'Scraping popular (homepage ongoing)');
+    logger.info({ url: BASE + '/' }, 'Scraping popular (homepage)');
     return this.fetchWithRetry('/');
   }
 
@@ -46,8 +47,8 @@ export class NontonanimeScraper extends BaseScraper {
   }
 
   async scrapeGenre(): Promise<string> {
-    logger.info({ url: BASE + '/genre-list/' }, 'Scraping genre list');
-    return this.fetchWithRetry('/genre-list/');
+    logger.info({ url: BASE + '/genre/' }, 'Scraping genre list');
+    return this.fetchWithRetry('/genre/');
   }
 
   async scrapeGenreDetail(slug: string): Promise<string> {

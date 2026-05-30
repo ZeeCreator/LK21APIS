@@ -126,41 +126,46 @@ function extractSlug(url: string): string {
   return clean.split('/').pop() || '';
 }
 
-// ── Detpost card parser ──
-
-function parseDetpostCard($: cheerio.CheerioAPI, el: Element): { title: string; slug: string; poster: string | null; episode: string | null; dayOrScore: string | null; date: string | null } | null {
+function parseCard(
+  $: cheerio.CheerioAPI,
+  el: Element
+): { title: string; slug: string; poster: string | null; episode: string | null; type: string | null } | null {
   const $el = $(el);
-  const link = $el.find('.thumb a').first();
-  const href = link.attr('href') || '';
+  const $link = $el.find('.bsx > a').first();
+  const href = $link.attr('href') || '';
   if (!href) return null;
+
   const slug = extractSlug(href);
-  const poster = $el.find('.thumbz img').first().attr('src') || null;
-  const title = $el.find('h2.jdlflm').first().text().trim() || '';
-  const epz = $el.find('.epz').first().text().trim() || null;
-  const epztipe = $el.find('.epztipe').first().text().trim() || null;
-  const newnime = $el.find('.newnime').first().text().trim() || null;
+  const poster = $el.find('.limit img').first().attr('src') || null;
+  const title = $el.find('.tt').first().text().trim() || '';
+  const episode = $el.find('.epx').first().text().trim() || null;
+  const type = $el.find('.typez').first().text().trim() || null;
+
   if (!title) return null;
-  return { title, slug, poster, episode: epz, dayOrScore: epztipe, date: newnime };
+  return { title, slug, poster, episode, type };
 }
 
-function detpostToAnimeItem(card: ReturnType<typeof parseDetpostCard>): NontonanimeAnimeItem | null {
+function cardToAnimeItem(card: ReturnType<typeof parseCard>): NontonanimeAnimeItem | null {
   if (!card) return null;
-  let rating: number | null = null;
-  if (card.dayOrScore) {
-    const score = parseFloat(card.dayOrScore.replace(/[^0-9.]/g, ''));
-    if (!isNaN(score) && score <= 10) rating = score;
-  }
   return {
     title: card.title,
     slug: card.slug,
     poster: card.poster,
-    rating,
-    type: null,
+    rating: null,
+    type: card.type,
     episode: card.episode,
   };
 }
 
-// ── Homepage ──
+const DAY_CLASS_MAP: Record<string, string> = {
+  sch_saturday: 'Sabtu',
+  sch_sunday: 'Minggu',
+  sch_monday: 'Senin',
+  sch_tuesday: 'Selasa',
+  sch_wednesday: 'Rabu',
+  sch_thursday: 'Kamis',
+  sch_friday: "Jum'at",
+};
 
 export function parseNontonanimeHomepage(html: string): NontonanimeHomepage {
   const $ = cheerio.load(html);
@@ -172,58 +177,48 @@ export function parseNontonanimeHomepage(html: string): NontonanimeHomepage {
     popularGenre: [],
   };
 
-  const ongoing: NontonanimeAnimeItem[] = [];
-  const completed: NontonanimeAnimeItem[] = [];
-
-  $('.venz').each((i, section) => {
-    const items: NontonanimeAnimeItem[] = [];
-    $(section).find('.detpost').each((_, el) => {
-      const card = parseDetpostCard($, el);
-      if (card) items.push(detpostToAnimeItem(card)!);
-    });
-    if (i === 0) ongoing.push(...items);
-    else if (i === 1) completed.push(...items);
+  const items: NontonanimeAnimeItem[] = [];
+  $('.listupd article.bs').each((_, el) => {
+    const card = parseCard($, el);
+    if (card) items.push(cardToAnimeItem(card)!);
   });
+  result.latestEpisodes = items;
+  result.tv = items;
 
-  result.latestEpisodes = ongoing;
-  result.tv = completed;
-
-  const seenSlugs = new Set<string>();
+  const seen = new Set<string>();
   const popular: NontonanimeAnimeItem[] = [];
-  $('.venz .detpost').each((_, el) => {
-    const card = parseDetpostCard($, el);
-    if (card && !seenSlugs.has(card.slug)) {
-      seenSlugs.add(card.slug);
-      popular.push(detpostToAnimeItem(card)!);
+  $('.listupd article.bs').each((_, el) => {
+    const card = parseCard($, el);
+    if (card && !seen.has(card.slug)) {
+      seen.add(card.slug);
+      popular.push(cardToAnimeItem(card)!);
     }
   });
   result.popular = popular;
 
-  const popGenre: NontonanimeAnimeItem[] = [];
-  $('.sidebar-area .detpost').each((_, el) => {
-    const card = parseDetpostCard($, el);
-    if (card) popGenre.push(detpostToAnimeItem(card)!);
+  const sidebarCards: NontonanimeAnimeItem[] = [];
+  $('.sidebar, aside, #sidebar').find('article.bs, .bs').each((_, el) => {
+    const card = parseCard($, el);
+    if (card) sidebarCards.push(cardToAnimeItem(card)!);
   });
-  result.popularGenre = popGenre;
+  result.popularGenre = sidebarCards;
 
   return result;
 }
-
-// ── Search ──
 
 export function parseNontonanimeSearch(html: string, query: string): NontonanimeSearchResult {
   const $ = cheerio.load(html);
   const items: NontonanimeSearchItem[] = [];
 
-  $('.detpost').each((_, el) => {
-    const card = parseDetpostCard($, el);
+  $('.listupd article.bs').each((_, el) => {
+    const card = parseCard($, el);
     if (card) {
       items.push({
         title: card.title,
         slug: card.slug,
         poster: card.poster,
         rating: null,
-        type: null,
+        type: card.type,
         season: null,
         synopsis: null,
         genres: [],
@@ -233,8 +228,6 @@ export function parseNontonanimeSearch(html: string, query: string): Nontonanime
 
   return { query, items };
 }
-
-// ── Detail ──
 
 export function parseNontonanimeAnimeDetail(html: string, slug: string): NontonanimeAnimeDetail {
   const $ = cheerio.load(html);
@@ -258,100 +251,78 @@ export function parseNontonanimeAnimeDetail(html: string, slug: string): Nontona
     recommendations: [],
   };
 
-  result.title = $('.jdlrx h1').first().text().trim() || slug;
-  result.poster = $('.fotoanime img.wp-post-image').first().attr('src') || null;
+  result.title = $('h1.entry-title').first().text().trim() || slug;
+  result.poster = $('.thumb img, .thumbz img').first().attr('src') || null;
 
-  $('.infozingle p').each((_, el) => {
+  $('.spe span').each((_, el) => {
     const $el = $(el);
-    const label = $el.find('b').first().text().trim().toLowerCase();
-    const $span = $el.find('span').first();
-    const $clone = $span.clone();
-    $clone.find('b').remove();
-    let value = $clone.text().trim().replace(/^:\s*/, '');
-
+    const $b = $el.find('b').first();
+    const label = $b.text().trim().toLowerCase().replace(':', '');
+    const value = $el.text().replace($b.text(), '').replace(':', '').trim();
     switch (label) {
-      case 'judul':
-        if (!result.title) result.title = value;
-        break;
-      case 'japanese':
-        if (value) result.altTitles.push(value);
-        break;
-      case 'skor': {
-        const score = parseFloat(value.replace(/[^0-9.]/g, ''));
-        if (!isNaN(score)) result.rating = score;
-        break;
-      }
-      case 'tipe':
-        result.type = value || null;
-        break;
       case 'status':
         result.status = value || null;
-        break;
-      case 'total episode':
-        result.episodeCount = value || null;
-        break;
-      case 'durasi':
-        result.duration = value || null;
-        break;
-      case 'tanggal rilis':
-        result.aired = value || null;
         break;
       case 'studio':
         result.studio = value || null;
         break;
-      case 'genre': {
-        $el.find('a').each((_, a) => {
-          const name = $(a).text().trim().replace(/,/g, '').trim();
-          const gSlug = extractSlug($(a).attr('href') || '');
-          if (name) result.genres.push({ name, slug: gSlug });
-        });
+      case 'tipe':
+        result.type = value || null;
         break;
-      }
+      case 'season':
+        result.season = value || null;
+        break;
+      case 'durasi':
+        result.duration = value || null;
+        break;
+      case 'dirilis':
+        if (!result.aired) result.aired = value || null;
+        break;
     }
   });
 
-  result.synopsis = $('.sinopc').first().text().trim() || null;
+  $('.genxed a').each((_, el) => {
+    const name = $(el).text().trim();
+    const gSlug = extractSlug($(el).attr('href') || '');
+    if (name) result.genres.push({ name, slug: gSlug });
+  });
 
-  $('.episodelist ul li').each((_, el) => {
+  result.synopsis = $('.desc').first().text().trim() || null;
+
+  $('.eplister ul li').each((_, el) => {
     const $el = $(el);
     const $a = $el.find('a').first();
     const href = $a.attr('href') || '';
-    const text = $a.text().trim();
     const epSlug = href ? extractSlug(href) : '';
-    const date = $el.find('.zeebr').first().text().trim() || null;
-    const epNumMatch = text.match(/Episode\s*(\d+)/i);
-    const epNumber = epNumMatch ? epNumMatch[1] : text.replace(/^.*Episode\s*/i, '');
+    const epNumber = $el.find('.epl-num').first().text().trim();
+    const epTitle = $el.find('.epl-title').first().text().trim();
+    const epDate = $el.find('.epl-date').first().text().trim() || null;
     if (epSlug) {
       result.episodes.push({
         number: epNumber,
-        title: text,
+        title: epTitle || epNumber,
         slug: epSlug,
-        date,
+        date: epDate,
       });
     }
   });
 
-  $('.isi-recommend-anime-series .isi-konten').each((_, el) => {
-    const $el = $(el);
-    const $link = $el.find('.judul-anime a').first();
-    const href = $link.attr('href') || '';
-    const rSlug = href ? extractSlug(href) : '';
-    if (rSlug && rSlug !== slug) {
-      result.recommendations.push({
-        title: $link.text().trim(),
-        slug: rSlug,
-        poster: $el.find('img').first().attr('src') || null,
-        rating: null,
-        type: null,
-        episode: null,
+  const seenRec = new Set<string>();
+  $('.bixbox').each((_, section) => {
+    const header = $(section).find('h1, h2, h3, h4').first().text().trim().toLowerCase();
+    if (header.includes('rekomendasi') || header.includes('rekomend')) {
+      $(section).find('.bs, article.bs').each((_, el) => {
+        const card = parseCard($, el);
+        if (card && !seenRec.has(card.slug) && card.slug !== slug) {
+          seenRec.add(card.slug);
+          result.recommendations.push(cardToAnimeItem(card)!);
+        }
       });
     }
   });
 
   return result;
 }
-
-// ── Episode ──
 
 export function parseNontonanimeEpisode(html: string): NontonanimeEpisodeDetail {
   const $ = cheerio.load(html);
@@ -371,198 +342,164 @@ export function parseNontonanimeEpisode(html: string): NontonanimeEpisodeDetail 
     nextEpisode: null,
   };
 
-  result.title = $('h1.posttl').first().text().trim() ||
-    $('h1').first().text().trim() || '';
+  result.title = $('h1.entry-title').first().text().trim() || '';
 
-  const epMatch = result.title.match(/(?:Episode|episode)\s*(\d+)/i);
-  if (epMatch) result.episodeNumber = epMatch[1];
+  const epNumEl = $('meta[itemprop="episodeNumber"]').first();
+  result.episodeNumber = epNumEl.attr('content') || null;
 
-  const seriesLink = $('a[href*="/anime/"]').filter((_, el) => {
-    const h = $(el).attr('href') || '';
-    return /\/anime\/[^/]+\/?$/.test(h) && !h.includes('/episode/');
-  }).first();
-  result.seriesSlug = extractSlug(seriesLink.attr('href') || '');
+  const posterImg = $('.tb img').first();
+  result.poster = posterImg.attr('data-src') || posterImg.attr('src') || null;
 
-  const titleMatch = result.title.match(/^(.+?)\s+(?:Episode|episode)\s+\d+/i);
-  result.seriesTitle = titleMatch ? titleMatch[1].trim() : result.seriesSlug;
+  const seriesLink = $('.ts-breadcrumb a[href*="/anime/"], .year a[href*="/anime/"]').first();
+  const seriesHref = seriesLink.attr('href') || '';
+  result.seriesSlug = seriesHref ? extractSlug(seriesHref) : '';
+  result.seriesTitle = seriesLink.text().trim() || result.seriesSlug;
 
-  const iframe = $('iframe').first();
+  const updateDateText = $('.updated').first().text().trim();
+  if (updateDateText) result.releaseDate = updateDateText;
+
+  const iframe = $('.megavid iframe').first();
   result.currentEmbed = iframe.attr('src') || null;
   if (result.currentEmbed) {
-    result.streamServers.push({ name: 'Default', url: result.currentEmbed, index: 1 });
+    result.streamServers.push({ name: 'LayarWibu', url: result.currentEmbed, index: 1 });
   }
 
-  const downloadGroups: Array<{ quality: string; links: Array<{ provider: string; url: string }> }> = [];
-  let currentQuality = 'default';
+  result.downloads = [];
 
-  $('h2, h3, h4, strong, b').each((_, el) => {
-    const text = $(el).text().trim();
-    const m = text.match(/(Mp4|MKV)\s+(\d{3,4}p)/i);
-    if (m) {
-      currentQuality = `${m[1].toUpperCase()} ${m[2].toLowerCase()}`;
-    }
-  });
-
-  const providerKeywords = ['ODFiles', 'Pdrain', 'Acefile', 'GoFile', 'Mega', 'KFiles'];
-  $('a[href*="link.desustream.com"]').each((_, el) => {
-    const $a = $(el);
-    const text = $a.text().trim();
-    const url = $a.attr('href') || '';
-    if (!url) return;
-
-    const matchedProvider = providerKeywords.find(k => text.includes(k));
-    const provider = matchedProvider || text || 'Unknown';
-
-    const parentText = $a.parent().text().trim();
-    let quality = currentQuality;
-    const qm = parentText.match(/(Mp4|MKV)\s+(\d{3,4}p)/i);
-    if (qm) quality = `${qm[1].toUpperCase()} ${qm[2].toLowerCase()}`;
-
-    let group = downloadGroups.find(g => g.quality === quality);
-    if (!group) {
-      group = { quality, links: [] };
-      downloadGroups.push(group);
-    }
-    if (!group.links.some(l => l.provider === provider)) {
-      group.links.push({ provider, url });
-    }
-  });
-
-  result.downloads = downloadGroups;
-
-  const prevLink = $('a[href*="/episode/"]').filter((_, el) => {
-    return $(el).text().trim().toLowerCase().includes('previous');
-  }).first();
+  const prevLink = $('a').filter((_, el) => $(el).text().trim() === 'Prev').first();
   if (prevLink.length) {
     const prevHref = prevLink.attr('href') || '';
     const prevSlug = prevHref ? extractSlug(prevHref) : '';
-    const prevNum = prevSlug.match(/episode-(\d+)/i)?.[1] || '';
-    if (prevSlug) result.prevEpisode = { title: `Episode ${prevNum}`, slug: prevSlug };
+    if (prevSlug) result.prevEpisode = { title: 'Previous Episode', slug: prevSlug };
   }
 
-  const nextLink = $('a[href*="/episode/"]').filter((_, el) => {
-    return $(el).text().trim().toLowerCase().includes('next');
-  }).first();
+  const nextLink = $('a').filter((_, el) => $(el).text().trim() === 'Next').first();
   if (nextLink.length) {
     const nextHref = nextLink.attr('href') || '';
     const nextSlug = nextHref ? extractSlug(nextHref) : '';
-    const nextNum = nextSlug.match(/episode-(\d+)/i)?.[1] || '';
-    if (nextSlug) result.nextEpisode = { title: `Episode ${nextNum}`, slug: nextSlug };
+    if (nextSlug) result.nextEpisode = { title: 'Next Episode', slug: nextSlug };
   }
 
   return result;
 }
-
-// ── Jadwal ──
 
 export function parseNontonanimeJadwal(html: string): NontonanimeJadwalDay[] {
   const $ = cheerio.load(html);
   const result: NontonanimeJadwalDay[] = [];
 
-  $('.kglist321').each((_, el) => {
-    const $el = $(el);
-    const day = $el.find('h2').first().text().trim();
+  $('.bixbox.schedulepage').each((_, section) => {
+    const $section = $(section);
+    const classes = $section.attr('class') || '';
+    let day = '';
+
+    for (const [cls, name] of Object.entries(DAY_CLASS_MAP)) {
+      if (classes.includes(cls)) {
+        day = name;
+        break;
+      }
+    }
+
+    if (!day) {
+      day = $section.find('.releases h3 span, .releases h2 span').first().text().trim();
+    }
+
     const items: NontonanimeJadwalItem[] = [];
-    $el.find('ul li a[href*="/anime/"]').each((_, a) => {
-      const $a = $(a);
-      const href = $a.attr('href') || '';
-      const title = $a.text().trim() || '';
-      const slug = href ? extractSlug(href) : '';
-      if (title && slug) {
+    $section.find('.listupd .bs').each((_, el) => {
+      const card = parseCard($, el);
+      if (card) {
+        const timeEl = $(el).find('.epx').first().text().trim() || null;
         items.push({
-          title,
-          slug,
-          poster: null,
-          episode: null,
+          title: card.title,
+          slug: card.slug,
+          poster: card.poster,
+          episode: card.episode,
           rating: null,
-          type: null,
-          time: null,
+          type: card.type,
+          time: timeEl,
           genres: [],
         });
       }
     });
-    if (day) result.push({ day, dateText: '', items });
+
+    if (day && items.length > 0) {
+      result.push({ day, dateText: '', items });
+    }
   });
 
   return result;
 }
 
-// ── Populer ──
-
 export function parseNontonanimePopuler(html: string): NontonanimePopulerItem[] {
   const $ = cheerio.load(html);
   const items: NontonanimePopulerItem[] = [];
 
-  $('.sidebar-area .detpost').each((_, el) => {
-    const card = parseDetpostCard($, el);
-    if (card) {
-      items.push({
-        title: card.title,
-        slug: card.slug,
-        poster: card.poster,
-        rating: null,
-        genre: card.dayOrScore,
-        synopsis: null,
-      });
+  $('.sidebar, aside, #sidebar').find('.bs, article.bs').each((_, el) => {
+    const $el = $(el);
+    const $link = $el.find('.bsx > a, a[href*="/anime/"]').first();
+    const href = $link.attr('href') || '';
+    if (!href) return;
+    const slug = extractSlug(href);
+  const $tt = $el.find('.tt').first();
+  const title = ($tt.find('h2').first().text().trim() || $tt.text().trim()) || '';
+    const poster = $el.find('.limit img').first().attr('src') || null;
+    const epx = $el.find('.epx').first().text().trim() || null;
+    if (title && slug) {
+      items.push({ title, slug, poster, rating: null, genre: epx, synopsis: null });
     }
   });
 
   return items;
 }
-
-// ── Ongoing ──
 
 export function parseNontonanimeOngoing(html: string): NontonanimeAnimeItem[] {
   const $ = cheerio.load(html);
   const items: NontonanimeAnimeItem[] = [];
   const seen = new Set<string>();
 
-  $('.detpost').each((_, el) => {
-    const card = parseDetpostCard($, el);
+  $('.listupd article.bs').each((_, el) => {
+    const card = parseCard($, el);
     if (card && !seen.has(card.slug)) {
       seen.add(card.slug);
-      items.push(detpostToAnimeItem(card)!);
+      items.push(cardToAnimeItem(card)!);
     }
   });
 
   return items;
 }
 
-// ── Genre ──
-
 export function parseNontonanimeGenre(html: string): NontonanimeGenreItem[] {
   const $ = cheerio.load(html);
   const genres: NontonanimeGenreItem[] = [];
 
-  $('.genres li a, ul.genres li a, .genre-list a').each((_, el) => {
+  $('ul.taxindex li a').each((_, el) => {
     const $el = $(el);
     const href = $el.attr('href') || '';
-    const name = $el.text().trim();
+    const name = $el.find('.name').first().text().trim();
+    const countText = $el.find('.count').first().text().trim();
     const slug = href ? extractSlug(href) : '';
-    if (name && slug && name !== 'Suprise Me') {
-      genres.push({ name, slug, totalSeries: 0, ongoingCount: 0 });
+    const count = parseInt(countText, 10) || 0;
+    if (name && slug) {
+      genres.push({ name, slug, totalSeries: count, ongoingCount: 0 });
     }
   });
 
   return genres;
 }
 
-// ── Genre Detail ──
-
 export function parseNontonanimeGenreDetail(html: string, genreSlug: string): { genre: string; items: NontonanimeSearchItem[] } {
   const $ = cheerio.load(html);
   const items: NontonanimeSearchItem[] = [];
-  const genreName = $('h1').first().text().trim() || $('title').first().text().split('|')[0]?.trim() || genreSlug;
+  const genreName = $('h1').first().text().trim() || $('title').first().text().split('•')[0]?.trim() || genreSlug;
 
-  $('.venz .detpost').each((_, el) => {
-    const card = parseDetpostCard($, el);
+  $('.listupd article.bs').each((_, el) => {
+    const card = parseCard($, el);
     if (card) {
       items.push({
         title: card.title,
         slug: card.slug,
         poster: card.poster,
         rating: null,
-        type: null,
+        type: card.type,
         season: null,
         synopsis: null,
         genres: [],
