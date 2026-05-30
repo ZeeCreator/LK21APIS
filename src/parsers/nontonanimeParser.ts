@@ -137,7 +137,8 @@ function parseCard(
 
   const slug = extractSlug(href);
   const poster = $el.find('.limit img').first().attr('src') || null;
-  const title = $el.find('.tt').first().text().trim() || '';
+  const $tt = $el.find('.tt').first();
+  const title = ($tt.find('h2').first().text().trim() || $tt.text().trim()) || '';
   const episode = $el.find('.epx').first().text().trim() || null;
   const type = $el.find('.typez').first().text().trim() || null;
 
