@@ -366,7 +366,7 @@ export function parseMovieList(html: string): ParsedMovieListItem[] {
     const numbeps = $(el).find('.gmr-numbeps').first().text().trim();
     const episodeCount = numbeps ? numbeps.replace(/Eps:\s*/i, '').replace(/\s+/g, ' ').trim() : undefined;
 
-    if (isAnimeTitle(title, slug)) return;
+    if (isAnimeTitle(title, slug, href)) return;
 
     movies.push({ externalId, title, slug, type, episodeCount, posterUrl, rating, quality });
   }

@@ -2,6 +2,7 @@ const ANIME_KEYWORDS = [
   'sub indo', 'batch', 'eps', 'anime',
   'nonton anime', 'anime sub', 'anime batch',
   'subtitle indonesia', 'subtitle indo',
+  'animasi', 'animation',
   'bdrip', 'bluray',
 ];
 
@@ -258,13 +259,15 @@ const ANIME_TITLE_PATTERNS = [
   /^worst/i,
 ];
 
-export function isAnimeTitle(title: string, slug?: string): boolean {
+export function isAnimeTitle(title: string, slug?: string, href?: string): boolean {
   const lower = title.toLowerCase();
   const slugLower = slug?.toLowerCase() ?? '';
+  const hrefLower = href?.toLowerCase() ?? '';
 
   for (const keyword of ANIME_KEYWORDS) {
     if (lower.includes(keyword)) return true;
     if (slugLower && slugLower.includes(keyword.replace(/\s+/g, '-'))) return true;
+    if (hrefLower.includes(keyword.replace(/\s+/g, '-'))) return true;
   }
 
   for (const pattern of ANIME_TITLE_PATTERNS) {
@@ -273,6 +276,8 @@ export function isAnimeTitle(title: string, slug?: string): boolean {
   }
 
   if (/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(title)) return true;
+
+  if (/\/(animasi|animation|hentai)\//i.test(hrefLower)) return true;
 
   return false;
 }
