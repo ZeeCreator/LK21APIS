@@ -5,9 +5,11 @@ import { logger } from '../utils/logger';
 export abstract class BaseScraper {
   protected http: HttpClient;
   protected config = scraperConfig;
+  protected baseUrl: string;
 
   constructor(baseUrl?: string) {
-    this.http = new HttpClient(baseUrl || scraperConfig.baseUrl);
+    this.baseUrl = baseUrl || scraperConfig.baseUrl;
+    this.http = new HttpClient(this.baseUrl);
   }
 
   protected async fetchWithRetry(url: string, retries?: number): Promise<string> {
@@ -16,7 +18,9 @@ export abstract class BaseScraper {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        return await this.http.getHTML(url);
+        return await this.http.getHTML(url, {
+          Referer: this.baseUrl + '/',
+        });
       } catch (error) {
         lastError = error as Error;
         logger.warn(

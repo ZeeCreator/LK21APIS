@@ -31,6 +31,10 @@ const envSchema = z.object({
   SCRAPER_USER_AGENT: z.string().default(
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
   ),
+  SCRAPER_PROXY_URL: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().optional()
+  ),
 
   PUPPETEER_HEADLESS: z
     .string()
