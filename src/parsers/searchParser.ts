@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import { ParsedMovieListItem } from './movieParser';
+import { isAnimeTitle } from '../utils/animeFilter';
 
 export interface ParsedSearchResult {
   query: string;
@@ -42,6 +43,8 @@ function extractMovieItem($: cheerio.CheerioAPI, el: any, seen: Set<string>): Pa
 
   const numbeps = $el.find('.gmr-numbeps').first().text().trim();
   const episodeCount = numbeps ? numbeps.replace(/Eps:\s*/i, '').replace(/\s+/g, ' ').trim() : undefined;
+
+  if (isAnimeTitle(title, slug)) return null;
 
   return { externalId: slug, title, slug, type, episodeCount, posterUrl, rating, quality };
 }

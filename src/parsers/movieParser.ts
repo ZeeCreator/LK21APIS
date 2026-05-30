@@ -2,6 +2,7 @@ import * as cheerio from 'cheerio';
 import type { Element } from 'domhandler';
 import { parseServerTabs } from './watchParser';
 import { rankSources } from '../services/embedRanker';
+import { isAnimeTitle } from '../utils/animeFilter';
 
 type CheerioElement = Element;
 
@@ -364,6 +365,8 @@ export function parseMovieList(html: string): ParsedMovieListItem[] {
 
     const numbeps = $(el).find('.gmr-numbeps').first().text().trim();
     const episodeCount = numbeps ? numbeps.replace(/Eps:\s*/i, '').replace(/\s+/g, ' ').trim() : undefined;
+
+    if (isAnimeTitle(title, slug)) return;
 
     movies.push({ externalId, title, slug, type, episodeCount, posterUrl, rating, quality });
   }

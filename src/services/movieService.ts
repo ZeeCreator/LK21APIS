@@ -3,6 +3,7 @@ import { cache } from '../cache/redisCache';
 import { cacheConfig } from '../config/app';
 import { latestScraper, detailScraper, searchScraper, genreScraper, countryScraper } from '../scrapers';
 import { getPaginationMeta, PaginationParams } from '../utils/response';
+import { isAnimeTitle } from '../utils/animeFilter';
 
 export class MovieService {
   async getLatest(page: number = 1, limit: number = 20) {
@@ -25,7 +26,8 @@ export class MovieService {
             take: params.limit,
             include: { genres: true },
           });
-          const meta = getPaginationMeta(total, params);
+          movies = movies.filter((m) => !isAnimeTitle(m.title, m.slug));
+          const meta = getPaginationMeta(movies.length, { ...params, limit: movies.length });
           const result = { data: movies, meta };
           await cache.set(cacheKey, result, cacheConfig.ttl.latest);
           return result;
@@ -62,7 +64,8 @@ export class MovieService {
             take: params.limit,
             include: { genres: true },
           });
-          const meta = getPaginationMeta(total, params);
+          movies = movies.filter((m) => !isAnimeTitle(m.title, m.slug));
+          const meta = getPaginationMeta(movies.length, { ...params, limit: movies.length });
           const result = { data: movies, meta };
           await cache.set(cacheKey, result, cacheConfig.ttl.trending);
           return result;
@@ -120,19 +123,20 @@ export class MovieService {
             { description: { contains: query, mode: 'insensitive' as const } },
           ],
         };
-        const [total, movies] = await Promise.all([
+        const [, movies] = await Promise.all([
           prisma.movie.count({ where }),
           prisma.movie.findMany({
             where,
             orderBy: { rating: 'desc' },
             skip: params.offset,
-            take: params.limit,
+            take: params.limit * 2,
             include: { genres: true },
           }),
         ]);
-        if (total > 0) {
-          const meta = getPaginationMeta(total, params);
-          const result = { data: movies, meta };
+        const filtered = movies.filter((m: any) => !isAnimeTitle(m.title, m.slug)).slice(0, limit);
+        if (filtered.length > 0) {
+          const meta = getPaginationMeta(filtered.length, { ...params, limit: filtered.length });
+          const result = { data: filtered, meta };
           await cache.set(cacheKey, result, cacheConfig.ttl.search);
           return result;
         }
@@ -157,19 +161,20 @@ export class MovieService {
 
     if (getDatabaseStatus()) {
       try {
-        const [total, movies] = await Promise.all([
+        const [, movies] = await Promise.all([
           prisma.movie.count({ where: { genres: { some: { slug } } } }),
           prisma.movie.findMany({
             where: { genres: { some: { slug } } },
             orderBy: { createdAt: 'desc' },
             skip: params.offset,
-            take: params.limit,
+            take: params.limit * 2,
             include: { genres: true },
           }),
         ]);
-        if (total > 0) {
-          const meta = getPaginationMeta(total, params);
-          const result = { data: movies, meta };
+        const filtered = movies.filter((m: any) => !isAnimeTitle(m.title, m.slug)).slice(0, limit);
+        if (filtered.length > 0) {
+          const meta = getPaginationMeta(filtered.length, { ...params, limit: filtered.length });
+          const result = { data: filtered, meta };
           await cache.set(cacheKey, result, cacheConfig.ttl.search);
           return result;
         }
@@ -190,19 +195,20 @@ export class MovieService {
 
     if (getDatabaseStatus()) {
       try {
-        const [total, movies] = await Promise.all([
+        const [, movies] = await Promise.all([
           prisma.movie.count({ where: { country: { equals: slug, mode: 'insensitive' as const } } }),
           prisma.movie.findMany({
             where: { country: { equals: slug, mode: 'insensitive' as const } },
             orderBy: { createdAt: 'desc' },
             skip: params.offset,
-            take: params.limit,
+            take: params.limit * 2,
             include: { genres: true },
           }),
         ]);
-        if (total > 0) {
-          const meta = getPaginationMeta(total, params);
-          return { data: movies, meta };
+        const filtered = movies.filter((m: any) => !isAnimeTitle(m.title, m.slug)).slice(0, limit);
+        if (filtered.length > 0) {
+          const meta = getPaginationMeta(filtered.length, { ...params, limit: filtered.length });
+          return { data: filtered, meta };
         }
       } catch {
         // fallback
