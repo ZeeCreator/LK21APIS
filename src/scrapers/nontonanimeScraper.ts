@@ -1,7 +1,7 @@
 import { BaseScraper } from './baseScraper';
 import { logger } from '../utils/logger';
 
-const BASE = 'https://v18.kuramanime.ing';
+const BASE = 'https://otakudesu.blog';
 
 export class NontonanimeScraper extends BaseScraper {
   constructor() {
@@ -9,54 +9,49 @@ export class NontonanimeScraper extends BaseScraper {
   }
 
   async scrapeHomepage(): Promise<string> {
-    logger.info({ url: BASE + '/' }, 'Scraping Kuramanime homepage');
+    logger.info({ url: BASE + '/' }, 'Scraping OtakuDesu homepage');
     return this.fetchWithRetry('/');
   }
 
   async scrapeDetail(slug: string): Promise<string> {
-    const url = `/anime/${slug}`;
+    const url = `/anime/${slug}/`;
     logger.info({ url: BASE + url, slug }, 'Scraping anime detail');
     return this.fetchWithRetry(url);
   }
 
-  async scrapeEpisode(path: string): Promise<string> {
-    const url = path.startsWith('/') ? path : `/${path}/`;
-    logger.info({ url: BASE + url }, 'Scraping episode');
+  async scrapeEpisode(slug: string): Promise<string> {
+    const url = `/episode/${slug}/`;
+    logger.info({ url: BASE + url, slug }, 'Scraping episode');
     return this.fetchWithRetry(url);
   }
 
   async scrapeSearch(query: string): Promise<string> {
-    logger.info({ url: `${BASE}/anime?search=${query}`, query }, 'Scraping search');
-    return this.fetchWithRetry(`/anime?search=${encodeURIComponent(query)}`);
-  }
-
-  async scrapeSearchJson(query: string): Promise<string> {
-    logger.info({ url: `${BASE}/quicksearch/get?q=${query}`, query }, 'Scraping quick search JSON');
-    return this.fetchWithRetry(`/quicksearch/get?q=${encodeURIComponent(query)}`);
+    logger.info({ url: `${BASE}/?s=${query}&post_type=anime`, query }, 'Scraping search');
+    return this.fetchWithRetry(`/?s=${encodeURIComponent(query)}&post_type=anime`);
   }
 
   async scrapeJadwal(): Promise<string> {
-    logger.info({ url: BASE + '/schedule' }, 'Scraping jadwal rilis');
-    return this.fetchWithRetry('/schedule');
+    logger.info({ url: BASE + '/jadwal-rilis/' }, 'Scraping jadwal rilis');
+    return this.fetchWithRetry('/jadwal-rilis/');
   }
 
   async scrapePopuler(): Promise<string> {
-    logger.info({ url: BASE + '/properties/season/spring-2026?order_by=most_viewed' }, 'Scraping popular');
-    return this.fetchWithRetry('/properties/season/spring-2026?order_by=most_viewed');
+    logger.info({ url: BASE + '/' }, 'Scraping popular (homepage ongoing)');
+    return this.fetchWithRetry('/');
   }
 
   async scrapeOngoing(): Promise<string> {
-    logger.info({ url: BASE + '/quick/ongoing?order_by=text' }, 'Scraping ongoing list');
-    return this.fetchWithRetry('/quick/ongoing?order_by=text');
+    logger.info({ url: BASE + '/ongoing-anime/' }, 'Scraping ongoing list');
+    return this.fetchWithRetry('/ongoing-anime/');
   }
 
   async scrapeGenre(): Promise<string> {
-    logger.info({ url: BASE + '/properties/genre' }, 'Scraping genre list');
-    return this.fetchWithRetry('/properties/genre');
+    logger.info({ url: BASE + '/genre-list/' }, 'Scraping genre list');
+    return this.fetchWithRetry('/genre-list/');
   }
 
   async scrapeGenreDetail(slug: string): Promise<string> {
-    const url = `/properties/genre/${slug}`;
+    const url = `/genres/${slug}/`;
     logger.info({ url: BASE + url, slug }, 'Scraping genre detail');
     return this.fetchWithRetry(url);
   }
