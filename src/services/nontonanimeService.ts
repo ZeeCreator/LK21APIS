@@ -13,6 +13,23 @@ import {
 import { cache } from '../cache/redisCache';
 
 export class NontonanimeService {
+  private async getHentaiSlugSet(forceRefresh: boolean = false): Promise<Set<string>> {
+    const cacheKey = 'nontonanime:hentai:slugs';
+    if (!forceRefresh) {
+      const cached = await cache.get<string[]>(cacheKey);
+      if (cached) return new Set(cached);
+    }
+    const html = await nontonanimeScraper.scrapeGenreDetail('hentong');
+    const parsed = parseNontonanimeGenreDetail(html, 'hentong');
+    const slugs = parsed.items.map(i => i.slug);
+    await cache.set(cacheKey, slugs, 3600);
+    return new Set(slugs);
+  }
+
+  private filterHentai<T extends { slug: string }>(items: T[], hentaiSet: Set<string>): T[] {
+    return items.filter(i => !hentaiSet.has(i.slug));
+  }
+
   async getHomepage(forceRefresh: boolean = false): Promise<NontonanimeHomepage> {
     const cacheKey = 'nontonanime:homepage';
     if (!forceRefresh) {
@@ -21,6 +38,12 @@ export class NontonanimeService {
     }
     const html = await nontonanimeScraper.scrapeHomepage();
     const data = parseNontonanimeHomepage(html);
+    const hentai = await this.getHentaiSlugSet(forceRefresh);
+    data.latestEpisodes = this.filterHentai(data.latestEpisodes, hentai);
+    data.movie = this.filterHentai(data.movie, hentai);
+    data.tv = this.filterHentai(data.tv, hentai);
+    data.popular = this.filterHentai(data.popular, hentai);
+    data.popularGenre = this.filterHentai(data.popularGenre, hentai);
     await cache.set(cacheKey, data, 300);
     return data;
   }
@@ -33,6 +56,8 @@ export class NontonanimeService {
     }
     const html = await nontonanimeScraper.scrapeDetail(slug);
     const data = parseNontonanimeAnimeDetail(html, slug);
+    const hentai = await this.getHentaiSlugSet(forceRefresh);
+    data.recommendations = this.filterHentai(data.recommendations, hentai);
     await cache.set(cacheKey, data, 600);
     return data;
   }
@@ -57,6 +82,8 @@ export class NontonanimeService {
     }
     const html = await nontonanimeScraper.scrapeSearch(query);
     const data = parseNontonanimeSearch(html, query);
+    const hentai = await this.getHentaiSlugSet(forceRefresh);
+    data.items = this.filterHentai(data.items, hentai);
     await cache.set(cacheKey, data, 300);
     return data;
   }
@@ -69,6 +96,10 @@ export class NontonanimeService {
     }
     const html = await nontonanimeScraper.scrapeJadwal();
     const data = parseNontonanimeJadwal(html);
+    const hentai = await this.getHentaiSlugSet(forceRefresh);
+    for (const day of data) {
+      day.items = this.filterHentai(day.items, hentai);
+    }
     await cache.set(cacheKey, data, 600);
     return data;
   }
@@ -81,8 +112,10 @@ export class NontonanimeService {
     }
     const html = await nontonanimeScraper.scrapePopuler();
     const data = parseNontonanimePopuler(html);
-    await cache.set(cacheKey, data, 600);
-    return data;
+    const hentai = await this.getHentaiSlugSet(forceRefresh);
+    const filtered = this.filterHentai(data, hentai);
+    await cache.set(cacheKey, filtered, 600);
+    return filtered;
   }
 
   async getOngoing(forceRefresh: boolean = false): Promise<NontonanimeAnimeItem[]> {
@@ -93,8 +126,10 @@ export class NontonanimeService {
     }
     const html = await nontonanimeScraper.scrapeOngoing();
     const data = parseNontonanimeOngoing(html);
-    await cache.set(cacheKey, data, 600);
-    return data;
+    const hentai = await this.getHentaiSlugSet(forceRefresh);
+    const filtered = this.filterHentai(data, hentai);
+    await cache.set(cacheKey, filtered, 600);
+    return filtered;
   }
 
   async getGenre(forceRefresh: boolean = false): Promise<NontonanimeGenreItem[]> {
@@ -117,8 +152,16 @@ export class NontonanimeService {
     }
     const html = await nontonanimeScraper.scrapeGenreDetail(slug);
     const data = parseNontonanimeGenreDetail(html, slug);
+    if (slug !== 'hentong') {
+      const hentai = await this.getHentaiSlugSet(forceRefresh);
+      data.items = this.filterHentai(data.items, hentai);
+    }
     await cache.set(cacheKey, data, 600);
     return data;
+  }
+
+  async getHentai(forceRefresh: boolean = false): Promise<{ genre: string; items: any[] }> {
+    return this.getGenreDetail('hentong', forceRefresh);
   }
 }
 

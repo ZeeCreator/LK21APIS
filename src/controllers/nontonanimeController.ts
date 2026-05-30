@@ -117,6 +117,17 @@ export class NontonanimeController {
       sendError(reply, 500, `Failed to retrieve genre detail: ${msg}`);
     }
   }
+
+  async getHentai(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const forceRefresh = (request.query as any)?.refresh === 'true';
+      const data = await nontonanimeService.getHentai(forceRefresh);
+      sendSuccess(reply, data, 'Hentai list retrieved successfully');
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      sendError(reply, 500, `Failed to retrieve hentai list: ${msg}`);
+    }
+  }
 }
 
 export const nontonanimeController = new NontonanimeController();

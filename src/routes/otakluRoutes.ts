@@ -101,4 +101,13 @@ export async function otakluRoutes(app: FastifyInstance): Promise<void> {
     },
     handler: nontonanimeController.getGenreDetail.bind(nontonanimeController),
   });
+
+  app.get('/hentai', {
+    schema: {
+      tags: ['Otaklu'],
+      summary: 'Get hentai list',
+      querystring: { type: 'object', properties: { refresh: { type: 'string' } } },
+    },
+    handler: nontonanimeController.getHentai.bind(nontonanimeController),
+  });
 }
