@@ -28,7 +28,9 @@ const envSchema = z.object({
   SCRAPER_TIMEOUT: z.coerce.number().default(30000),
   SCRAPER_RETRY_COUNT: z.coerce.number().default(3),
   SCRAPER_RETRY_DELAY: z.coerce.number().default(1000),
-  SCRAPER_USER_AGENT: z.string().default('Mozilla/5.0'),
+  SCRAPER_USER_AGENT: z.string().default(
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+  ),
 
   PUPPETEER_HEADLESS: z
     .string()

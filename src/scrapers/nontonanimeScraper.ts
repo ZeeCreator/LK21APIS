@@ -1,93 +1,64 @@
 import { BaseScraper } from './baseScraper';
 import { logger } from '../utils/logger';
-import { env } from '../config/env';
 
-const BASE = 'https://s13.nontonanimeid.boats';
+const BASE = 'https://v18.kuramanime.ing';
 
 export class NontonanimeScraper extends BaseScraper {
   constructor() {
     super(BASE);
   }
 
-  private async fetchWithCloudscraper(url: string): Promise<string> {
-    const fullUrl = BASE + url;
-    const maxRetries = env.SCRAPER_RETRY_COUNT;
-    let lastError: Error | null = null;
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const cs = require('cloudscraper');
-        const html = await cs.get(fullUrl);
-        return html;
-      } catch (error) {
-        lastError = error as Error;
-        const msg = (error as any)?.message || '';
-        const isWaf =
-          msg.includes('Cloudflare') ||
-          msg.includes('challenge') ||
-          msg.includes('WAF') ||
-          msg.includes('403');
-
-        logger.warn(
-          { url: fullUrl, attempt, maxRetries, isWaf, err: error },
-          `Nontonanime fetch ${attempt}/${maxRetries} failed`
-        );
-
-        if (attempt < maxRetries) {
-          await this.delay((isWaf ? 3000 : env.SCRAPER_RETRY_DELAY) * attempt);
-        }
-      }
-    }
-
-    throw lastError || new Error(`Failed to fetch ${fullUrl} after ${maxRetries} retries`);
-  }
-
   async scrapeHomepage(): Promise<string> {
-    logger.info({ url: BASE + '/' }, 'Scraping Nontonanime homepage');
-    return this.fetchWithCloudscraper('/');
+    logger.info({ url: BASE + '/' }, 'Scraping Kuramanime homepage');
+    return this.fetchWithRetry('/');
   }
 
   async scrapeDetail(slug: string): Promise<string> {
-    const url = `/anime/${slug}/`;
+    const url = `/anime/${slug}`;
     logger.info({ url: BASE + url, slug }, 'Scraping anime detail');
-    return this.fetchWithCloudscraper(url);
+    return this.fetchWithRetry(url);
   }
 
-  async scrapeEpisode(slug: string): Promise<string> {
-    const url = `/${slug}/`;
-    logger.info({ url: BASE + url, slug }, 'Scraping episode');
-    return this.fetchWithCloudscraper(url);
+  async scrapeEpisode(path: string): Promise<string> {
+    const url = path.startsWith('/') ? path : `/${path}/`;
+    logger.info({ url: BASE + url }, 'Scraping episode');
+    return this.fetchWithRetry(url);
   }
 
   async scrapeSearch(query: string): Promise<string> {
-    logger.info({ url: `${BASE}/?s=${query}`, query }, 'Scraping search');
-    return this.fetchWithCloudscraper(`/?s=${encodeURIComponent(query)}`);
+    logger.info({ url: `${BASE}/anime?search=${query}`, query }, 'Scraping search');
+    return this.fetchWithRetry(`/anime?search=${encodeURIComponent(query)}`);
+  }
+
+  async scrapeSearchJson(query: string): Promise<string> {
+    logger.info({ url: `${BASE}/quicksearch/get?q=${query}`, query }, 'Scraping quick search JSON');
+    return this.fetchWithRetry(`/quicksearch/get?q=${encodeURIComponent(query)}`);
   }
 
   async scrapeJadwal(): Promise<string> {
-    logger.info({ url: BASE + '/jadwal-rilis/' }, 'Scraping jadwal rilis');
-    return this.fetchWithCloudscraper('/jadwal-rilis/');
+    logger.info({ url: BASE + '/schedule' }, 'Scraping jadwal rilis');
+    return this.fetchWithRetry('/schedule');
   }
 
   async scrapePopuler(): Promise<string> {
-    logger.info({ url: BASE + '/popular-series/' }, 'Scraping popular series');
-    return this.fetchWithCloudscraper('/popular-series/');
+    logger.info({ url: BASE + '/properties/season/spring-2026?order_by=most_viewed' }, 'Scraping popular');
+    return this.fetchWithRetry('/properties/season/spring-2026?order_by=most_viewed');
   }
 
   async scrapeOngoing(): Promise<string> {
-    logger.info({ url: BASE + '/ongoing-list/' }, 'Scraping ongoing list');
-    return this.fetchWithCloudscraper('/ongoing-list/');
+    logger.info({ url: BASE + '/quick/ongoing?order_by=text' }, 'Scraping ongoing list');
+    return this.fetchWithRetry('/quick/ongoing?order_by=text');
   }
 
   async scrapeGenre(): Promise<string> {
-    logger.info({ url: BASE + '/genres/' }, 'Scraping genre list');
-    return this.fetchWithCloudscraper('/genres/');
+    logger.info({ url: BASE + '/properties/genre' }, 'Scraping genre list');
+    return this.fetchWithRetry('/properties/genre');
   }
 
   async scrapeGenreDetail(slug: string): Promise<string> {
-    const url = `/genres/${slug}/`;
+    const url = `/properties/genre/${slug}`;
     logger.info({ url: BASE + url, slug }, 'Scraping genre detail');
-    return this.fetchWithCloudscraper(url);
+    return this.fetchWithRetry(url);
   }
 }
 
