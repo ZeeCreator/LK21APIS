@@ -13,6 +13,7 @@ import { adminRoutes } from './adminRoutes';
 import { urlExtractRoutes } from './urlExtractRoutes';
 import { testStreamRoutes } from './testStreamRoutes';
 import { sokujaRoutes } from './sokujaRoutes';
+import { nontonanimeRoutes } from './nontonanimeRoutes';
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   app.register(
@@ -104,5 +105,12 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       await api.register(sokujaRoutes);
     },
     { prefix: '/api/v2' }
+  );
+
+  app.register(
+    async (api) => {
+      await api.register(nontonanimeRoutes);
+    },
+    { prefix: '/api/nontonanime' }
   );
 }
