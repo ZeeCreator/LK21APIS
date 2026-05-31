@@ -3,6 +3,19 @@ import { env } from '../config/env';
 import { scraperConfig } from '../config/app';
 import { logger } from '../utils/logger';
 
+let cloudscraper: any = null;
+
+function getCloudscraper() {
+  if (!cloudscraper) {
+    try {
+      cloudscraper = require('cloudscraper');
+    } catch {
+      logger.warn('cloudscraper package not available, skipping CF bypass');
+    }
+  }
+  return cloudscraper;
+}
+
 export abstract class BaseScraper {
   protected http: HttpClient;
   protected fallbackHttp: HttpClient | null = null;
@@ -77,6 +90,20 @@ export abstract class BaseScraper {
       } catch (fallbackErr) {
         logger.error({ fallbackErr: String(fallbackErr) }, 'Fallback scraper also failed');
         lastError = fallbackErr as Error;
+      }
+    }
+
+    // Last resort: try cloudscraper (bypasses Cloudflare/WAF)
+    const cs = getCloudscraper();
+    if (cs && lastError) {
+      const fullUrl = this.baseUrl.replace(/\/+$/, '') + '/' + url.replace(/^\/+/, '');
+      logger.info({ fullUrl }, 'Trying cloudscraper as last resort');
+      try {
+        const html = await cs.get(fullUrl);
+        return html;
+      } catch (csErr) {
+        logger.error({ csErr: String(csErr) }, 'cloudscraper also failed');
+        lastError = csErr as Error;
       }
     }
 
