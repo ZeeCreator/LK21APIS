@@ -7,3 +7,4 @@ export { downloadController } from './downloadController';
 export { subtitleController } from './subtitleController';
 export { adminController } from './adminController';
 export { sokujaController } from './sokujaController';
+export { anichinController } from './anichinController';

@@ -15,6 +15,7 @@ import { testStreamRoutes } from './testStreamRoutes';
 import { sokujaRoutes } from './sokujaRoutes';
 import { nontonanimeRoutes } from './nontonanimeRoutes';
 import { otakluRoutes } from './otakluRoutes';
+import { anichinRoutes } from './anichinRoutes';
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   app.register(
@@ -120,5 +121,12 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       await api.register(otakluRoutes);
     },
     { prefix: '/api/otaklu' }
+  );
+
+  app.register(
+    async (api) => {
+      await api.register(anichinRoutes);
+    },
+    { prefix: '/api/anichin' }
   );
 }
