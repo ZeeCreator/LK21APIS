@@ -50,26 +50,14 @@ export class AnichinService {
     return data;
   }
 
-  async getOngoing(page: number = 1, forceRefresh: boolean = false): Promise<AnichinSeriesList> {
-    const cacheKey = `anichin:ongoing:${page}`;
+  async getLatest(page: number = 1, forceRefresh: boolean = false): Promise<AnichinSeriesList> {
+    const cacheKey = `anichin:latest:${page}`;
     if (!forceRefresh) {
       const cached = await cache.get<AnichinSeriesList>(cacheKey);
       if (cached) return cached;
     }
-    const html = await anichinScraper.scrapeOngoing(page);
-    const data = parseAnichinSeriesList(html, 'Ongoing');
-    await cache.set(cacheKey, data, 600);
-    return data;
-  }
-
-  async getCompleted(page: number = 1, forceRefresh: boolean = false): Promise<AnichinSeriesList> {
-    const cacheKey = `anichin:completed:${page}`;
-    if (!forceRefresh) {
-      const cached = await cache.get<AnichinSeriesList>(cacheKey);
-      if (cached) return cached;
-    }
-    const html = await anichinScraper.scrapeCompleted(page);
-    const data = parseAnichinSeriesList(html, 'Completed');
+    const html = await anichinScraper.scrapeLatest(page);
+    const data = parseAnichinSeriesList(html, 'Latest');
     await cache.set(cacheKey, data, 600);
     return data;
   }

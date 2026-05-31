@@ -39,10 +39,10 @@ export async function anichinRoutes(app: FastifyInstance): Promise<void> {
     handler: anichinController.getEpisode.bind(anichinController),
   });
 
-  app.get('/ongoing', {
+  app.get('/latest', {
     schema: {
       tags: ['Anichin'],
-      summary: 'Daftar donghua ongoing',
+      summary: 'Daftar anime latest',
       querystring: {
         type: 'object',
         properties: {
@@ -51,22 +51,7 @@ export async function anichinRoutes(app: FastifyInstance): Promise<void> {
         },
       },
     },
-    handler: anichinController.getOngoing.bind(anichinController),
-  });
-
-  app.get('/completed', {
-    schema: {
-      tags: ['Anichin'],
-      summary: 'Daftar donghua completed',
-      querystring: {
-        type: 'object',
-        properties: {
-          page: { type: 'string' },
-          refresh: { type: 'string' },
-        },
-      },
-    },
-    handler: anichinController.getCompleted.bind(anichinController),
+    handler: anichinController.getLatest.bind(anichinController),
   });
 
   app.get('/search', {

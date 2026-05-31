@@ -25,16 +25,10 @@ export class AnichinScraper extends BaseScraper {
     return this.fetchWithRetry(url, undefined, BASE + '/ongoing/');
   }
 
-  async scrapeOngoing(page: number = 1): Promise<string> {
-    const url = page > 1 ? `/ongoing/page/${page}/` : '/ongoing/';
-    logger.info({ url: BASE + url, page }, 'Scraping ongoing list');
+  async scrapeLatest(page: number = 1): Promise<string> {
+    const url = page > 1 ? `/anime/page/${page}/` : '/anime/';
+    logger.info({ url: BASE + url, page }, 'Scraping latest anime list');
     return this.fetchWithRetry(url, undefined, BASE + '/');
-  }
-
-  async scrapeCompleted(page: number = 1): Promise<string> {
-    const url = page > 1 ? `/completed/page/${page}/` : '/completed/';
-    logger.info({ url: BASE + url, page }, 'Scraping completed list');
-    return this.fetchWithRetry(url, undefined, BASE + '/ongoing/');
   }
 
   async scrapeSchedule(): Promise<string> {

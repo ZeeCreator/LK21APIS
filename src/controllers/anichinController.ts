@@ -46,29 +46,16 @@ export class AnichinController {
     }
   }
 
-  async getOngoing(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async getLatest(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
       const query = request.query as { page?: string; refresh?: string };
       const page = Math.max(1, parseInt(query.page || '1', 10));
       const forceRefresh = query.refresh === 'true';
-      const data = await anichinService.getOngoing(page, forceRefresh);
-      sendSuccess(reply, data, 'Daftar ongoing berhasil diambil');
+      const data = await anichinService.getLatest(page, forceRefresh);
+      sendSuccess(reply, data, 'Daftar latest berhasil diambil');
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Unknown error';
-      sendError(reply, 500, `Gagal mengambil ongoing: ${msg}`);
-    }
-  }
-
-  async getCompleted(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    try {
-      const query = request.query as { page?: string; refresh?: string };
-      const page = Math.max(1, parseInt(query.page || '1', 10));
-      const forceRefresh = query.refresh === 'true';
-      const data = await anichinService.getCompleted(page, forceRefresh);
-      sendSuccess(reply, data, 'Daftar completed berhasil diambil');
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Unknown error';
-      sendError(reply, 500, `Gagal mengambil completed: ${msg}`);
+      sendError(reply, 500, `Gagal mengambil latest: ${msg}`);
     }
   }
 
