@@ -36,6 +36,11 @@ const envSchema = z.object({
     z.string().optional()
   ),
 
+  SCRAPER_FALLBACK_URL: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().url().optional()
+  ),
+
   PUPPETEER_HEADLESS: z
     .string()
     .transform((v) => v === 'true')
