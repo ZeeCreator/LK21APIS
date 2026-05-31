@@ -297,15 +297,14 @@ export function parseAnichinSeriesDetail(html: string, slug: string): AnichinSer
   const totalEp = parseInt($('.episodes-ul').first().attr('i') || '0', 10);
   if (totalEp > result.episodes.length) {
     const existingNums = new Set(result.episodes.map(e => parseInt(e.number)));
-    const lastSlug = result.episodes[result.episodes.length - 1]?.slug || '';
+    const lastEp = result.episodes[result.episodes.length - 1];
+    const lastSlug = lastEp?.slug || '';
+    const lastNum = lastEp ? parseInt(lastEp.number) : 0;
 
     for (let n = 1; n <= totalEp; n++) {
       if (!existingNums.has(n)) {
-        const padded = String(n).padStart(2, '0');
-        let genSlug = lastSlug
-          .replace(/-\d{2}(?=-tamat-)/, `-${padded}`)
-          .replace(/-\d{2}(?=-subtitle)/, `-${padded}`)
-          .replace('-tamat', '');
+        let genSlug = lastSlug.replace(/episode-\d+/, `episode-${n}`);
+        if (n < lastNum) genSlug = genSlug.replace('-tamat', '');
 
         result.episodes.push({
           number: String(n),
