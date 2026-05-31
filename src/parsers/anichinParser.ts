@@ -253,7 +253,7 @@ export function parseAnichinSeriesDetail(html: string, slug: string): AnichinSer
     result.synopsis = entryContent.text().trim() || null;
   }
 
-  // Parse episode list from sidebar
+  // Parse episode list from sidebar (old format)
   $('#singlepisode .episodelist ul li').each((_, el) => {
     const $el = $(el);
     const $a = $el.find('a').first();
@@ -273,6 +273,25 @@ export function parseAnichinSeriesDetail(html: string, slug: string): AnichinSer
       });
     }
   });
+
+  // Parse episode list from block_area format (new format)
+  if (result.episodes.length === 0) {
+    $('.block_area-episodes a.ep-item').each((_, el) => {
+      const $a = $(el);
+      const href = $a.attr('href') || '';
+      const epSlug = href ? extractSlug(href) : '';
+      const epNumber = $a.attr('data-number') || $a.find('.order').first().text().trim();
+
+      if (epSlug && epNumber) {
+        result.episodes.push({
+          number: epNumber,
+          title: `Episode ${epNumber}`,
+          slug: epSlug,
+          date: null,
+        });
+      }
+    });
+  }
 
   // Parse batch downloads
   $('.mctnx .soraddlx.soradlg').each((_, section) => {
