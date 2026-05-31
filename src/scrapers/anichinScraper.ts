@@ -33,47 +33,35 @@ export class AnichinScraper extends BaseScraper {
       primaryHtml = await this.fetchWithRetry(url, undefined, BASE + '/');
       const epCount = countEpisodeLinks(primaryHtml);
       logger.info({ source: 'anichin.ro', slug, epCount }, 'Primary source result');
-
-      // If primary has enough episodes, return it
       if (epCount >= 3) return primaryHtml;
     } catch (err) {
       logger.warn({ source: 'anichin.ro', slug, err: String(err) }, 'Primary source failed');
     }
 
     // Try fallback source (anichin.cafe)
-    logger.info({ source: 'anichin.cafe', slug }, 'Trying fallback source');
-    const cafeHttp = new HttpClient(FALLBACK_BASE);
-    const maxRetries = this.config.retryCount;
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const primaryEpCount = primaryHtml ? countEpisodeLinks(primaryHtml) : 0;
+    if (primaryEpCount < 3) {
       try {
+        logger.info({ source: 'anichin.cafe', slug }, 'Trying fallback source');
+        const cafeHttp = new HttpClient(FALLBACK_BASE);
         const html = await cafeHttp.getHTML(url);
-        const epCount = countEpisodeLinks(html);
-        logger.info({ source: 'anichin.cafe', slug, epCount }, 'Fallback source result');
-
-        if (epCount > 0) return html;
-        if (primaryHtml) return primaryHtml;
-        return html;
+        if (countEpisodeLinks(html) > 0) return html;
       } catch (err: any) {
-        // If 403 and fallback proxy is configured, try through proxy
-        if (err?.response?.status === 403 && env.SCRAPER_FALLBACK_URL && this.fallbackHttp) {
+        logger.warn({ source: 'anichin.cafe', slug, err: String(err) }, 'Fallback failed');
+        if (err?.response?.status === 403 && env.SCRAPER_FALLBACK_URL) {
           try {
             const fullUrl = FALLBACK_BASE.replace(/\/+$/, '') + '/' + url.replace(/^\/+/, '');
-            logger.info({ fullUrl, fallback: env.SCRAPER_FALLBACK_URL }, 'Trying fallback proxy for anichin.cafe');
-            const html = await this.fallbackHttp.getHTML('/' + fullUrl);
-            return html;
+            logger.info({ fullUrl, fallback: env.SCRAPER_FALLBACK_URL }, 'Trying fallback proxy');
+            const proxyHttp = new HttpClient(env.SCRAPER_FALLBACK_URL);
+            const proxyHtml = await proxyHttp.getHTML('/' + fullUrl);
+            if (countEpisodeLinks(proxyHtml) > 0) return proxyHtml;
           } catch (proxyErr) {
-            logger.error({ proxyErr: String(proxyErr) }, 'Fallback proxy also failed');
+            logger.error({ proxyErr: String(proxyErr) }, 'Proxy fallback failed');
           }
-        }
-
-        if (attempt < maxRetries) {
-          await this.delay(this.config.retryDelay * attempt);
         }
       }
     }
 
-    // Return primary result if we got anything
     if (primaryHtml) return primaryHtml;
     throw new Error(`Failed to scrape series ${slug} from all sources`);
   }
