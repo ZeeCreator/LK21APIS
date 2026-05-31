@@ -1,7 +1,7 @@
 import { BaseScraper } from './baseScraper';
 import { logger } from '../utils/logger';
 
-const BASE = 'https://anichin.ro';
+const BASE = 'https://anichin.moe';
 
 export class AnichinScraper extends BaseScraper {
   constructor() {
