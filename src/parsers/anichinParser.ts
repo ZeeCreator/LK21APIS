@@ -293,6 +293,28 @@ export function parseAnichinSeriesDetail(html: string, slug: string): AnichinSer
     });
   }
 
+  // Parse episode list from eplister format (anichin.cafe)
+  if (result.episodes.length === 0) {
+    $('.eplister li a').each((_, el) => {
+      const $a = $(el);
+      const href = $a.attr('href') || '';
+      const epSlug = href ? extractSlug(href) : '';
+      const text = $a.text().trim();
+      const numMatch = text.match(/^\d+/);
+      const epNumber = numMatch ? numMatch[0] : '';
+      const dateText = $a.find('.date, .eph-date').first().text().trim() || null;
+
+      if (epSlug && epNumber) {
+        result.episodes.push({
+          number: epNumber,
+          title: `Episode ${epNumber}`,
+          slug: epSlug,
+          date: dateText,
+        });
+      }
+    });
+  }
+
   // Parse batch downloads
   $('.mctnx .soraddlx.soradlg').each((_, section) => {
     const $section = $(section);

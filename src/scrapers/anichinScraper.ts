@@ -1,7 +1,9 @@
 import { BaseScraper } from './baseScraper';
+import { HttpClient } from '../utils/httpClient';
 import { logger } from '../utils/logger';
 
 const BASE = 'https://anichin.ro';
+const FALLBACK_BASE = 'https://anichin.cafe';
 
 export class AnichinScraper extends BaseScraper {
   constructor() {
@@ -15,8 +17,9 @@ export class AnichinScraper extends BaseScraper {
 
   async scrapeSeries(slug: string): Promise<string> {
     const url = `/seri/${slug}/`;
-    logger.info({ url: BASE + url, slug }, 'Scraping series detail');
-    return this.fetchWithRetry(url, undefined, BASE + '/');
+    logger.info({ url: BASE + url, slug }, 'Scraping series detail from anichin.cafe');
+    const fallbackHttp = new HttpClient(FALLBACK_BASE);
+    return fallbackHttp.getHTML(url);
   }
 
   async scrapeEpisode(slug: string): Promise<string> {
