@@ -471,7 +471,7 @@ export function parseAnichinSeriesList(html: string, title: string): AnichinSeri
   const $ = cheerio.load(html);
   const items: AnichinCardItem[] = [];
 
-  $('.listupd.cp article.bs').each((_, el) => {
+  $('.listupd article.bs').each((_, el) => {
     const card = parseCard($, el);
     if (card) items.push(card);
   });
@@ -495,6 +495,19 @@ export function parseAnichinSeriesList(html: string, title: string): AnichinSeri
       total,
       next: nextEl.length ? current + 1 : null,
       prev: prevEl.length ? current - 1 : null,
+    };
+  }
+
+  const hpageNext = $('.hpage a.r').first();
+  if (!pagination && hpageNext.length) {
+    const href = hpageNext.attr('href') || '';
+    const pageMatch = href.match(/[?&]page=(\d+)/);
+    const current = pageMatch ? parseInt(pageMatch[1], 10) - 1 : 1;
+    pagination = {
+      current,
+      total: current + 1,
+      next: current + 1,
+      prev: current > 1 ? current - 1 : null,
     };
   }
 
