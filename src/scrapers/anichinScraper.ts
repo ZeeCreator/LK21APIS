@@ -14,15 +14,24 @@ export class AnichinScraper extends BaseScraper {
   }
 
   async scrapeSeries(slug: string): Promise<string> {
-    const url = `/seri/${slug}/`;
-    logger.info({ url: BASE + url, slug }, 'Scraping series detail');
-    return this.fetchWithRetry(url, undefined, BASE + '/');
+    const paths = [`/seri/${slug}/`, `/anime/${slug}/`];
+    let lastErr: Error | null = null;
+    for (const url of paths) {
+      try {
+        logger.info({ url: BASE + url, slug }, 'Scraping series detail');
+        return await this.fetchWithRetry(url, undefined, BASE + '/');
+      } catch (err) {
+        lastErr = err as Error;
+        logger.warn({ url: BASE + url, slug, err: String(err) }, 'Series path failed, trying next');
+      }
+    }
+    throw lastErr || new Error(`Failed to scrape series ${slug}`);
   }
 
   async scrapeEpisode(slug: string): Promise<string> {
     const url = `/${slug}/`;
     logger.info({ url: BASE + url, slug }, 'Scraping episode page');
-    return this.fetchWithRetry(url, undefined, BASE + '/ongoing/');
+    return this.fetchWithRetry(url, undefined, BASE + '/');
   }
 
   async scrapeLatest(page: number = 1): Promise<string> {
