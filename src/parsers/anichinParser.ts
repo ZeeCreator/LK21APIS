@@ -293,6 +293,32 @@ export function parseAnichinSeriesDetail(html: string, slug: string): AnichinSer
     });
   }
 
+  // Generate missing episode slugs from total count (i attribute)
+  const totalEp = parseInt($('.episodes-ul').first().attr('i') || '0', 10);
+  if (totalEp > result.episodes.length) {
+    const existingNums = new Set(result.episodes.map(e => parseInt(e.number)));
+    const lastSlug = result.episodes[result.episodes.length - 1]?.slug || '';
+
+    for (let n = 1; n <= totalEp; n++) {
+      if (!existingNums.has(n)) {
+        const padded = String(n).padStart(2, '0');
+        let genSlug = lastSlug
+          .replace(/-\d{2}(?=-tamat-)/, `-${padded}`)
+          .replace(/-\d{2}(?=-subtitle)/, `-${padded}`)
+          .replace('-tamat', '');
+
+        result.episodes.push({
+          number: String(n),
+          title: `Episode ${n}`,
+          slug: genSlug,
+          date: null,
+        });
+      }
+    }
+
+    result.episodes.sort((a, b) => parseInt(a.number) - parseInt(b.number));
+  }
+
   // Parse batch downloads
   $('.mctnx .soraddlx.soradlg').each((_, section) => {
     const $section = $(section);
