@@ -282,7 +282,7 @@ export function parseAnichinSeriesDetail(html: string, slug: string): AnichinSer
       const epSlug = href ? extractSlug(href) : '';
       const epNumber = $a.attr('data-number') || $a.find('.order').first().text().trim();
 
-      if (epSlug && epNumber) {
+      if (epSlug && epNumber && epNumber !== '0') {
         result.episodes.push({
           number: epNumber,
           title: `Episode ${epNumber}`,
